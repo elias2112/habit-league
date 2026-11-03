@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root { color-scheme: dark; }
+html, body, #root { min-height: 100%; }
+body {
+  background-color: var(--color-slate-950);
+  color: var(--color-slate-100);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;          /* sin "rebote" ni pull-to-refresh: se siente app */
+  -webkit-text-size-adjust: 100%;
+}
+/* Botones y navegación no seleccionables, como en una app nativa. */
+button, nav, a { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* iOS hace zoom al enfocar inputs con fuente < 16px. */
+input, select, textarea { font-size: 16px; }
+
+@utility card {
+  border-radius: var(--radius-2xl);
+  background-color: var(--color-slate-900);
+  border: 1px solid var(--color-slate-800);
+  padding: --spacing(4);
+}
+@utility input {
+  width: 100%;
+  border-radius: var(--radius-xl);
+  background-color: var(--color-slate-800);
+  border: 1px solid var(--color-slate-700);
+  padding: --spacing(2.5) --spacing(3);
+  color: var(--color-slate-100);
+  outline: none;
+  &::placeholder { color: var(--color-slate-500); }
+  &:focus { border-color: var(--color-emerald-500); }
+}
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: --spacing(2);
+  border-radius: var(--radius-xl);
+  padding: --spacing(2.5) --spacing(4);
+  font-weight: 600;
+  transition: transform .1s, background-color .15s, opacity .15s;
+  &:active { transform: scale(.98); }
+  &:disabled { opacity: .5; pointer-events: none; }
+}
+@utility btn-primary {
+  background-color: var(--color-emerald-500);
+  color: var(--color-slate-950);
+  &:hover { background-color: var(--color-emerald-400); }
+}
+@utility btn-ghost {
+  background-color: var(--color-slate-800);
+  color: var(--color-slate-200);
+  &:hover { background-color: var(--color-slate-700); }
+}
+@utility label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-slate-400);
+  margin-bottom: --spacing(1);
+}
