@@ -1,0 +1,633 @@
+{
+  "version": "0.1",
+  "note": "Quiz propio, NO es un test psicométrico validado. Textos editables.",
+  "axes": {
+    "E": "Estructura: alto = necesita guía y reglas claras",
+    "M": "Momentum: alto = constante hoy",
+    "R": "Resiliencia: alto = retoma rápido tras fallar"
+  },
+  "axis_high_threshold": 6,
+  "axis_scale": "cada eje suma 4 preguntas de 0 a 3 (0-12); alto si >= 6 (umbral arbitrario, ajustable)",
+  "areas": [
+    {
+      "id": "cuerpo",
+      "name": "Cuerpo",
+      "desc": "Movimiento y energía física"
+    },
+    {
+      "id": "mente",
+      "name": "Mente",
+      "desc": "Calma, claridad y bienestar mental"
+    },
+    {
+      "id": "sueno",
+      "name": "Sueño",
+      "desc": "Descanso y horarios"
+    },
+    {
+      "id": "alimentacion",
+      "name": "Alimentación",
+      "desc": "Comer y tomar agua mejor"
+    },
+    {
+      "id": "foco",
+      "name": "Foco",
+      "desc": "Productividad y organización"
+    },
+    {
+      "id": "social",
+      "name": "Conexión",
+      "desc": "Relaciones y vida social"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q1",
+      "section": "objetivos",
+      "type": "multi",
+      "min": 1,
+      "max": 3,
+      "text": "¿Qué áreas de tu vida querés mejorar ahora mismo? Elegí hasta 3.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Cuerpo y ejercicio",
+          "area": "cuerpo"
+        },
+        {
+          "id": "b",
+          "text": "Mente y bienestar",
+          "area": "mente"
+        },
+        {
+          "id": "c",
+          "text": "Sueño y descanso",
+          "area": "sueno"
+        },
+        {
+          "id": "d",
+          "text": "Alimentación",
+          "area": "alimentacion"
+        },
+        {
+          "id": "e",
+          "text": "Foco y productividad",
+          "area": "foco"
+        },
+        {
+          "id": "f",
+          "text": "Relaciones y vida social",
+          "area": "social"
+        }
+      ]
+    },
+    {
+      "id": "q2",
+      "section": "objetivos",
+      "type": "single",
+      "text": "¿Qué resultado te importaría más dentro de 66 días?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Tener más energía y fuerza",
+          "area": "cuerpo"
+        },
+        {
+          "id": "b",
+          "text": "Sentirme más tranquilo y con la cabeza clara",
+          "area": "mente"
+        },
+        {
+          "id": "c",
+          "text": "Dormir bien y despertar descansado",
+          "area": "sueno"
+        },
+        {
+          "id": "d",
+          "text": "Comer mejor sin complicarme",
+          "area": "alimentacion"
+        },
+        {
+          "id": "e",
+          "text": "Avanzar en mi trabajo o estudios",
+          "area": "foco"
+        },
+        {
+          "id": "f",
+          "text": "Estar más cerca de la gente que quiero",
+          "area": "social"
+        }
+      ]
+    },
+    {
+      "id": "q3",
+      "section": "nivel",
+      "area": "cuerpo",
+      "type": "single",
+      "text": "¿Cómo es tu actividad física hoy?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Casi no me muevo",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Me muevo a veces, sin constancia",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Hago ejercicio 2 o 3 veces por semana",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Entreno 4 o más veces por semana",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q4",
+      "section": "nivel",
+      "area": "sueno",
+      "type": "single",
+      "text": "¿Cómo dormís últimamente?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Mal, casi siempre",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "De forma irregular",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Bastante bien",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Muy bien y con horarios fijos",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "section": "nivel",
+      "area": "alimentacion",
+      "type": "single",
+      "text": "¿Cómo describirías tu alimentación?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Improvisada, con mucha comida rápida",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Intento cuidarme pero soy inconsistente",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Bastante ordenada",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Muy cuidada",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q6",
+      "section": "nivel",
+      "area": "social",
+      "type": "single",
+      "text": "¿Cada cuánto hablás o te ves con gente que te importa?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Casi nunca",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Una vez al mes",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Una vez por semana",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Casi todos los días",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q7",
+      "section": "nivel",
+      "area": "mente",
+      "type": "single",
+      "text": "¿Cuánto estrés o carga mental sentís en una semana normal?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Casi todo el tiempo",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Varias veces por semana",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "A veces",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Rara vez",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q8",
+      "section": "nivel",
+      "area": "foco",
+      "type": "single",
+      "text": "¿Qué tan seguido llegás a hacer lo que planeaste para el día?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Casi nunca",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "A veces",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Casi siempre",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Siempre",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q9",
+      "section": "estructura",
+      "type": "single",
+      "text": "Cuando empiezo un hábito nuevo, lo que más me ayuda es…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Hacerlo a mi manera, sin reglas",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Tener una idea y ajustarla sobre la marcha",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Una guía general y me organizo yo",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Un plan paso a paso con recordatorios",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q10",
+      "section": "estructura",
+      "type": "single",
+      "text": "Cuando tengo el día libre, normalmente…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Improviso y me funciona",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Organizo bastante bien",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Armo una lista pero me cuesta seguirla",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Me cuesta decidir por dónde empezar",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q11",
+      "section": "estructura",
+      "type": "single",
+      "text": "Para mí, las reglas claras y fijas son…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Una carga",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Un poco molestas",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Útiles",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Necesarias; sin ellas me pierdo",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q12",
+      "section": "estructura",
+      "type": "single",
+      "text": "Un recordatorio diario en la app me parecería…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Molesto",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Indiferente",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Útil",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Imprescindible",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q13",
+      "section": "momentum",
+      "type": "single",
+      "text": "En las últimas 4 semanas, ¿cuántos días por semana mantuviste alguna rutina?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Casi ninguno",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "1 o 2",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "3 a 5",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Casi todos",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q14",
+      "section": "momentum",
+      "type": "single",
+      "text": "¿Cuándo fue la última vez que te sentiste orgulloso de tu constancia?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Hace tanto que no me acuerdo",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Hace meses",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Hace unas semanas",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Esta semana",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q15",
+      "section": "momentum",
+      "type": "single",
+      "text": "¿Qué tan predecibles son tus días?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Muy caóticos",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Cambian de semana en semana",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Bastante predecibles",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Muy predecibles",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q16",
+      "section": "momentum",
+      "type": "single",
+      "text": "¿Qué tan seguro estás de sostener una rutina diaria durante 7 días seguidos?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nada seguro",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Poco seguro",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Bastante seguro",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Muy seguro",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q17",
+      "section": "resiliencia",
+      "type": "single",
+      "text": "Si me salteo un día de mi rutina, normalmente…",
+      "options": [
+        {
+          "id": "a",
+          "text": "La abandono",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Tardo semanas en retomarla",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "La retomo en unos días",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "La retomo al día siguiente",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q18",
+      "section": "resiliencia",
+      "type": "single",
+      "text": "Cuando fallo un día, lo que suelo pensar es…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Prefiero no intentarlo más",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Ya arruiné todo",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Me molesta, pero sigo",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Pasa, mañana sigo",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q19",
+      "section": "resiliencia",
+      "type": "single",
+      "text": "Cuando una semana sale mal, yo…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Dejo todo",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Pierdo la motivación varios días",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Espero a la semana siguiente para volver",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Ajusto el plan y sigo",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "q20",
+      "section": "resiliencia",
+      "type": "single",
+      "text": "Competir con amigos en esto me…",
+      "options": [
+        {
+          "id": "a",
+          "text": "Presiona o me desanima",
+          "value": 0
+        },
+        {
+          "id": "b",
+          "text": "Motiva solo si voy ganando",
+          "value": 1
+        },
+        {
+          "id": "c",
+          "text": "Motiva si estoy cerca",
+          "value": 2
+        },
+        {
+          "id": "d",
+          "text": "Motiva aunque vaya último",
+          "value": 3
+        }
+      ]
+    }
+  ]
+}

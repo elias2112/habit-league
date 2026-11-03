@@ -3,6 +3,9 @@ export interface Profile {
   username: string
   display_name: string | null
   timezone: string
+  archetype: string | null
+  area_scores: Record<string, number>
+  quiz_completed_at: string | null
 }
 
 export interface Group {
@@ -18,8 +21,9 @@ export interface Habit {
   id: string
   user_id: string
   name: string
-  icon: string | null
-  xp_value: number
+  tier: number
+  area: string | null
+  catalog_id: string | null
   archived: boolean
   created_at: string
 }
@@ -28,7 +32,10 @@ export interface LeaderboardRow {
   user_id: string
   username: string
   display_name: string | null
-  total_xp: number
+  archetype: string | null
+  total_points: number
+  max_points: number
+  pct: number | null
   streak: number
 }
 
@@ -37,8 +44,8 @@ export interface FeedRow {
   user_id: string
   username: string
   habit_name: string
-  habit_icon: string | null
-  xp: number
+  habit_area: string | null
+  points: number
   log_date: string
   created_at: string
 }

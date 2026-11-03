@@ -1,0 +1,135 @@
+{
+  "version": "0.1",
+  "note": "Los 8 arquetipos salen de combinar 3 ejes (alto/bajo). start_habits y tier_adjust son propuestas sin validar.",
+  "archetypes": [
+    {
+      "id": "arquitecto",
+      "name": "El Arquitecto",
+      "tagline": "Ya tenés el sistema; ahora lo afinás.",
+      "desc": "Valorás los planes claros, ya sostenés rutinas y te recuperás rápido cuando algo falla. Tu desafío es mantener el ritmo sin caer en la monotonía.",
+      "strengths": [
+        "Rutinas ya armadas",
+        "Retomás rápido"
+      ],
+      "watch": [
+        "Aburrirte de lo mismo"
+      ],
+      "start_habits": 5,
+      "tier_adjust": 0,
+      "code": "EMR"
+    },
+    {
+      "id": "perfeccionista",
+      "name": "El Perfeccionista",
+      "tagline": "Constante, pero un tropiezo te pesa.",
+      "desc": "Sostenés rutinas y te gustan los planes claros, pero un día fallado puede hacerte sentir que se arruinó todo. Un día perdido no es el fin del camino.",
+      "strengths": [
+        "Constancia",
+        "Orden"
+      ],
+      "watch": [
+        "Tomar un día fallado como un fracaso total"
+      ],
+      "start_habits": 4,
+      "tier_adjust": 0,
+      "code": "EMr"
+    },
+    {
+      "id": "aprendiz",
+      "name": "El Aprendiz",
+      "tagline": "Necesitás guía y siempre volvés a levantarte.",
+      "desc": "Todavía no tenés un ritmo estable, pero buscás estructura y retomás cuando algo sale mal. Un plan paso a paso, con pocos hábitos, es lo tuyo.",
+      "strengths": [
+        "Retomás después de fallar",
+        "Abierto a la guía"
+      ],
+      "watch": [
+        "Querer hacer demasiado de golpe"
+      ],
+      "start_habits": 3,
+      "tier_adjust": 0,
+      "code": "EmR"
+    },
+    {
+      "id": "reiniciado",
+      "name": "El Reiniciado",
+      "tagline": "Empezás de nuevo, y con apoyo.",
+      "desc": "Necesitás estructura, tu constancia actual es baja y los tropiezos te cuestan. Lo mejor es arrancar con pocos hábitos fáciles y apoyarte en el grupo.",
+      "strengths": [
+        "Ganas de cambiar",
+        "Disposición a pedir apoyo"
+      ],
+      "watch": [
+        "Abandonar tras los primeros tropiezos"
+      ],
+      "start_habits": 3,
+      "tier_adjust": -1,
+      "code": "Emr"
+    },
+    {
+      "id": "explorador",
+      "name": "El Explorador",
+      "tagline": "Te organizás solo y sostenés el ritmo.",
+      "desc": "Sos autónomo, constante y flexible: ajustás sobre la marcha y seguís. Probá hábitos nuevos sin perder tu base.",
+      "strengths": [
+        "Autonomía",
+        "Constancia",
+        "Flexibilidad"
+      ],
+      "watch": [
+        "Dispersarte con demasiadas ideas"
+      ],
+      "start_habits": 5,
+      "tier_adjust": 0,
+      "code": "eMR"
+    },
+    {
+      "id": "velocista",
+      "name": "El Velocista",
+      "tagline": "Arrancás fuerte; el desafío es el largo plazo.",
+      "desc": "Tenés impulso y autonomía, pero cuando algo falla tendés a soltar. Los retos largos y el grupo te ayudan a no apagarte.",
+      "strengths": [
+        "Impulso",
+        "Autonomía"
+      ],
+      "watch": [
+        "Soltar todo tras un mal tramo"
+      ],
+      "start_habits": 4,
+      "tier_adjust": 0,
+      "code": "eMr"
+    },
+    {
+      "id": "nomada",
+      "name": "El Nómada",
+      "tagline": "Libre y sin ritmo fijo, pero resiliente.",
+      "desc": "Preferís tu propio camino y todavía no tenés un ritmo estable, pero te recuperás bien. Empezar liviano y flexible te funciona.",
+      "strengths": [
+        "Resiliencia",
+        "Independencia"
+      ],
+      "watch": [
+        "Falta de rutina fija"
+      ],
+      "start_habits": 3,
+      "tier_adjust": 0,
+      "code": "emR"
+    },
+    {
+      "id": "espiritu_libre",
+      "name": "El Espíritu Libre",
+      "tagline": "Las reglas no son lo tuyo; empezá liviano.",
+      "desc": "No te gustan las reglas fijas y sostener cuesta. Lo mejor es empezar con pocos hábitos fáciles y que la competencia con amigos haga de motor.",
+      "strengths": [
+        "Creatividad",
+        "Independencia"
+      ],
+      "watch": [
+        "Abandonar cuando se vuelve rutina"
+      ],
+      "start_habits": 3,
+      "tier_adjust": -1,
+      "code": "emr"
+    }
+  ]
+}

@@ -5,3 +5,7 @@ dev-dist
 .env.local
 .env.*.local
 *.log
+
+# Carpeta de entrega del dueño (ya integrada en content/, docs/ y supabase/)
+modifications/
+modifications.zip

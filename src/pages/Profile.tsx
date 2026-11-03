@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import { allTimezones, browserTimezone } from '../lib/date'
+import { Link } from 'react-router-dom'
+import { archetypeById } from '../lib/quiz'
+import ArchetypeCard from '../components/ArchetypeCard'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 
 export default function Profile() {
@@ -15,6 +18,7 @@ export default function Profile() {
   const [saved, setSaved] = useState(false)
   const zones = useMemo(allTimezones, [])
   const deviceTz = browserTimezone()
+  const arch = archetypeById(profile?.archetype)
 
   useEffect(() => {
     if (!profile) return
@@ -48,7 +52,7 @@ export default function Profile() {
             id="username" className="input" required pattern="[A-Za-z0-9_]{3,24}" maxLength={24}
             title="3–24 caracteres: letras, números o _" value={username} onChange={(e) => setUsername(e.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-500">3–24 caracteres: letras, números o _. Es como te ve el grupo.</p>
+          <p className="mt-1 text-xs text-muted">3–24 caracteres: letras, números o _. Es como te ve el grupo.</p>
         </div>
         <div>
           <label className="label" htmlFor="display">Nombre visible (opcional)</label>
@@ -60,21 +64,28 @@ export default function Profile() {
             {!zones.includes(timezone) && <option value={timezone}>{timezone}</option>}
             {zones.map((z) => <option key={z} value={z}>{z}</option>)}
           </select>
-          <p className="mt-1 text-xs text-slate-500">
-            Define cuándo empieza tu día para checks y rachas.
+          <p className="mt-1 text-xs text-muted">
+            Define cuándo empieza tu día para los checks y la racha.
             {deviceTz !== timezone && (
-              <> Tu dispositivo está en <button type="button" className="underline text-emerald-400" onClick={() => setTimezone(deviceTz)}>{deviceTz}</button>.</>
+              <> Tu dispositivo está en <button type="button" className="underline text-primary" onClick={() => setTimezone(deviceTz)}>{deviceTz}</button>.</>
             )}
           </p>
         </div>
         <ErrorBox>{error}</ErrorBox>
-        {saved && <p className="text-sm text-emerald-400">Guardado.</p>}
+        {saved && <p className="text-sm text-primary">Guardado.</p>}
         <button className="btn btn-primary w-full" disabled={busy}>Guardar</button>
       </form>
 
-      <button className="btn btn-ghost mt-4 w-full" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+      {arch && (
+        <div className="mt-5">
+          <ArchetypeCard a={arch} />
+        </div>
+      )}
+      <Link to="/quiz" className="btn btn-ghost mt-3 w-full">{arch ? 'Repetir el quiz' : 'Hacer el quiz'}</Link>
 
-      <p className="mt-6 text-xs text-slate-500">
+      <button className="btn btn-ghost mt-3 w-full" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+
+      <p className="mt-6 text-xs text-muted">
         Para instalar la app: en iPhone, Safari → Compartir → “Añadir a pantalla de inicio”. En Android, Chrome → menú → “Instalar aplicación”.
       </p>
     </>

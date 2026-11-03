@@ -6,7 +6,7 @@ PWA de hábitos para un grupo de amigos: check diario, XP, rachas y ranking del 
 
 ### 1. Supabase (plan gratuito)
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. **SQL Editor** → pega todo [supabase/schema.sql](supabase/schema.sql) → *Run*.
+2. **SQL Editor** → pegá todo [supabase/schema.sql](supabase/schema.sql) → *Run*. Después, en una consulta nueva, [supabase/migrations/002_quiz_personas_puntos.sql](supabase/migrations/002_quiz_personas_puntos.sql) → *Run*.
 3. **Authentication → Sign In / Providers → Email**: para un grupo de amigos conviene **desactivar "Confirm email"**.
    El SMTP integrado de Supabase solo manda unos pocos correos por hora; con la confirmación activada,
    varios amigos registrándose a la vez pueden quedarse sin correo. (Alternativa: configurar un SMTP propio.)

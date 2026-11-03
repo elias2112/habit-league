@@ -32,9 +32,10 @@ El video (5:30) muestra casi solo el **onboarding** de una app llamada "Life Res
 | Ranking | Sí, pero **solo entre amigos del grupo** (no global) |
 | Rachas | Sí |
 | Contrato de racha | Sí, versión simple (v1.1) |
-| Cuestionario de onboarding | **No** en MVP (el usuario crea sus hábitos a mano) |
+| Cuestionario de onboarding | **Sí** (20 preguntas propias, ver `docs/QUIZ_Y_PERFILES.md`) |
 | Apple Health | **No**. Una PWA no puede leer Apple Health [PROPUESTA: dejar fuera] |
-| Arquetipos / radar de 6 pilares | **No** en MVP; posible v2 |
+| Arquetipos | **Sí**: 8 arquetipos propios (actitud) × 6 áreas de vida (objetivos) |
+| Radar de 6 áreas | v2 |
 | Texto de "estudios" / testimonios / cifras | **No**. No inventar datos científicos |
 
 ## 3. Decisiones tomadas
@@ -51,17 +52,20 @@ El video (5:30) muestra casi solo el **onboarding** de una app llamada "Life Res
 - Tailwind CSS
 - `vite-plugin-pwa` (manifest + service worker)
 - `@supabase/supabase-js`
-- Hosting estático gratuito [ABIERTO: elegir entre Vercel, Cloudflare Pages o Netlify; verificar límites vigentes antes de decidir]
+- Hosting: **GitHub Pages** (gratis con repo público; 100 GB/mes de tráfico según docs.github.com, consultado el 2026-11-03). URL: https://elias2112.github.io/habit-league/
 
 ## 5. Reglas de juego [PROPUESTA — todo editable]
 
-- Cada hábito tiene un valor de XP (por defecto 10).
-- Marcar un hábito como hecho un día = ese XP, **una vez por día por hábito**.
-- Un día cuenta para la **racha** si se completa **al menos un hábito** [ABIERTO: ¿o todos los hábitos del día?].
-- Racha se rompe si pasa un día completo sin ningún hábito.
-- Bonus por racha (ej. +10% por cada 7 días) [ABIERTO: definir fórmula; no incluido en el SQL inicial].
-- El "día" se define según la zona horaria de cada usuario (por defecto `Europe/Madrid`).
-- Sistema de honor: no hay verificación; el grupo ve el feed de lo que cada uno marca. [ABIERTO: ¿permitir marcar días pasados? Por defecto no.]
+- Cada hábito tiene una **dificultad (tier 1, 2 o 3)**. Los puntos de un hábito = `100 × tier / suma de tiers de los hábitos activos del usuario`.
+- **Normalización:** cada usuario suma como máximo **100 puntos por día**, sin importar su arquetipo ni cuántos hábitos tenga. La base de datos aplica el tope (migración `002`).
+- Un hábito se marca **una vez por día**, solo el día de hoy según la zona horaria del usuario.
+- El ranking muestra `total_points` y `pct` (puntos / máximo posible desde que el miembro entró), para comparar justo.
+- Un día cuenta para la **racha** si se completa **al menos un hábito** [ABIERTO: ¿o todos?].
+- La racha se rompe si pasa un día completo sin ningún hábito.
+- Sistema de honor: no hay verificación; el grupo ve lo que cada uno marca.
+- **Límite conocido:** el puntaje mide cumplimiento del *propio plan*. Con pocos hábitos fáciles se puede llegar a 100. Mitigación propuesta: mínimo 3 hábitos activos (la UI debe exigirlo; la base de datos todavía no) y que el grupo vea los hábitos de todos.
+- [ABIERTO] ¿Permitir marcar el día de ayer?
+- [ABIERTO] Bonus por racha: no incluido.
 
 ## 6. Pantallas del MVP
 
@@ -74,7 +78,8 @@ El video (5:30) muestra casi solo el **onboarding** de una app llamada "Life Res
 
 ## 7. Hoja de ruta
 
-- **Fase 0 — Cimientos:** proyecto Vite+React+PWA, Supabase conectado, auth.
+- **Fase 0 — Cimientos:** proyecto Vite+React+PWA, Supabase conectado, auth (hecho: app deployada).
+- **Fase 0.5 — Identidad:** quiz, arquetipos, catálogo de hábitos y guía visual (`content/`, `docs/DESIGN.md`).
 - **Fase 1 — Núcleo:** grupos, hábitos, check diario, ranking (usar `supabase/schema.sql`).
 - **Fase 2 — Pegajoso:** rachas visibles, feed del grupo, recordatorios push, contrato de racha.
 - **Fase 3 — Extras:** pilares/radar, arquetipos, retos semanales con penitencia, insignias.

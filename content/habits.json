@@ -1,0 +1,174 @@
+{
+  "version": "0.1",
+  "note": "tier 1/2/3 = esfuerzo; los puntos salen de 100*tier/suma(tiers activos). Los criterios son autodeclarados. Sin afirmaciones de salud.",
+  "habits": [
+    {
+      "id": "caminar_30",
+      "area": "cuerpo",
+      "name": "Caminar 30 minutos",
+      "criterion": "Al menos 30 minutos caminando, sumados en el día.",
+      "tier": 1
+    },
+    {
+      "id": "estirar_10",
+      "area": "cuerpo",
+      "name": "Estirar 10 minutos",
+      "criterion": "10 minutos de estiramientos o movilidad.",
+      "tier": 1
+    },
+    {
+      "id": "ejercicio_20",
+      "area": "cuerpo",
+      "name": "Hacer ejercicio 20 minutos",
+      "criterion": "20 minutos de actividad que te suba el pulso.",
+      "tier": 2
+    },
+    {
+      "id": "fuerza_30",
+      "area": "cuerpo",
+      "name": "Entrenamiento de fuerza",
+      "criterion": "Una sesión de fuerza de al menos 30 minutos.",
+      "tier": 3
+    },
+    {
+      "id": "respirar_5",
+      "area": "mente",
+      "name": "Respirar o meditar 5 minutos",
+      "criterion": "5 minutos de respiración o meditación.",
+      "tier": 1
+    },
+    {
+      "id": "diario_5",
+      "area": "mente",
+      "name": "Escribir en un diario",
+      "criterion": "Al menos 5 minutos escribiendo sobre tu día.",
+      "tier": 1
+    },
+    {
+      "id": "leer_15",
+      "area": "mente",
+      "name": "Leer 15 minutos",
+      "criterion": "15 minutos de lectura (libro, no redes).",
+      "tier": 2
+    },
+    {
+      "id": "meditar_15",
+      "area": "mente",
+      "name": "Meditar 15 minutos",
+      "criterion": "15 minutos de meditación sin interrupciones.",
+      "tier": 3
+    },
+    {
+      "id": "pantallas_off_30",
+      "area": "sueno",
+      "name": "Pantallas apagadas 30 min antes de dormir",
+      "criterion": "Sin pantallas los últimos 30 minutos antes de dormir.",
+      "tier": 1
+    },
+    {
+      "id": "sin_cafeina_tarde",
+      "area": "sueno",
+      "name": "Sin cafeína después de las 16:00",
+      "criterion": "Ninguna bebida con cafeína pasadas las 16:00.",
+      "tier": 1
+    },
+    {
+      "id": "despertar_fijo",
+      "area": "sueno",
+      "name": "Despertar a la misma hora",
+      "criterion": "Despertar dentro de ±30 minutos de tu hora objetivo.",
+      "tier": 2
+    },
+    {
+      "id": "dormir_7h",
+      "area": "sueno",
+      "name": "Dormir 7 horas o más",
+      "criterion": "Dormir al menos 7 horas (lo declarás vos).",
+      "tier": 3
+    },
+    {
+      "id": "agua_2l",
+      "area": "alimentacion",
+      "name": "Tomar 2 litros de agua",
+      "criterion": "Llegar a unos 2 litros de agua en el día.",
+      "tier": 1
+    },
+    {
+      "id": "verdura_2",
+      "area": "alimentacion",
+      "name": "Verdura en 2 comidas",
+      "criterion": "Verdura en al menos 2 comidas del día.",
+      "tier": 1
+    },
+    {
+      "id": "cocinar_casa",
+      "area": "alimentacion",
+      "name": "Cocinar una comida en casa",
+      "criterion": "Preparar al menos una comida vos mismo.",
+      "tier": 2
+    },
+    {
+      "id": "sin_ultraprocesados",
+      "area": "alimentacion",
+      "name": "Un día sin ultraprocesados",
+      "criterion": "Ninguna comida ultraprocesada en todo el día.",
+      "tier": 3
+    },
+    {
+      "id": "planificar_5",
+      "area": "foco",
+      "name": "Planificar el día 5 minutos",
+      "criterion": "Escribir tus prioridades antes de empezar.",
+      "tier": 1
+    },
+    {
+      "id": "cerrar_dia",
+      "area": "foco",
+      "name": "Anotar 3 prioridades para mañana",
+      "criterion": "Dejar escritas 3 prioridades para el día siguiente.",
+      "tier": 1
+    },
+    {
+      "id": "tarea_dificil",
+      "area": "foco",
+      "name": "Hacer primero la tarea más difícil",
+      "criterion": "Empezar el día con la tarea que más te cuesta.",
+      "tier": 2
+    },
+    {
+      "id": "bloque_profundo_45",
+      "area": "foco",
+      "name": "Un bloque de trabajo profundo de 45 min",
+      "criterion": "45 minutos seguidos en una sola tarea, sin distracciones.",
+      "tier": 3
+    },
+    {
+      "id": "mensaje_alguien",
+      "area": "social",
+      "name": "Escribirle a alguien que querés",
+      "criterion": "Enviar un mensaje a un amigo o familiar.",
+      "tier": 1
+    },
+    {
+      "id": "agradecer",
+      "area": "social",
+      "name": "Agradecer a alguien",
+      "criterion": "Agradecerle a alguien por algo concreto.",
+      "tier": 1
+    },
+    {
+      "id": "llamada_10",
+      "area": "social",
+      "name": "Llamar a alguien 10 minutos",
+      "criterion": "Una llamada o videollamada de al menos 10 minutos.",
+      "tier": 2
+    },
+    {
+      "id": "plan_persona",
+      "area": "social",
+      "name": "Pasar tiempo en persona con alguien",
+      "criterion": "Compartir un rato en persona con alguien que te importa.",
+      "tier": 3
+    }
+  ]
+}

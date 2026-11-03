@@ -4,6 +4,7 @@ import { useAuth } from '../lib/auth'
 import { useGroups } from '../lib/groups'
 import { errorMessage } from '../lib/errors'
 import { timeAgo } from '../lib/date'
+import { areaStyle } from '../lib/areas'
 import type { FeedRow } from '../lib/types'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
@@ -26,18 +27,18 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
   }, [groupId, load])
 
   if (!rows) return <Spinner />
-  if (rows.length === 0) return <p className="text-sm text-slate-500">Aún no hay actividad.</p>
+  if (rows.length === 0) return <p className="text-sm text-muted">Todavía no hay actividad.</p>
   return (
-    <ul className="divide-y divide-slate-800">
+    <ul className="divide-y divide-line">
       {rows.map((r) => (
         <li key={r.log_id} className="flex items-center gap-3 py-2.5 text-sm">
-          <span className="text-lg">{r.habit_icon || '✅'}</span>
+          <span className="text-lg" aria-hidden>{areaStyle(r.habit_area).icon}</span>
           <span className="min-w-0 flex-1">
-            <b className={r.user_id === me ? 'text-emerald-400' : ''}>{r.user_id === me ? 'Tú' : r.username}</b>{' '}
-            <span className="text-slate-300">· {r.habit_name}</span>
+            <b className={r.user_id === me ? 'text-primary' : ''}>{r.user_id === me ? 'Tú' : r.username}</b>{' '}
+            <span className="text-ink">· {r.habit_name}</span>
           </span>
-          <span className="text-emerald-400">+{r.xp}</span>
-          <span className="w-20 text-right text-xs text-slate-500">{timeAgo(r.created_at)}</span>
+          <span className="font-bold text-xp">+{Math.round(Number(r.points))}</span>
+          <span className="w-20 text-right text-xs text-muted">{timeAgo(r.created_at)}</span>
         </li>
       ))}
     </ul>
@@ -85,7 +86,7 @@ export default function Groups() {
   }
 
   async function leave() {
-    if (!selected || !confirm(`¿Salir de "${selected.name}"? Dejarás de ver su ranking.`)) return
+    if (!selected || !confirm(`¿Salir de "${selected.name}"? Vas a dejar de ver su ranking.`)) return
     const { error } = await supabase.from('group_members').delete().eq('group_id', selected.id).eq('user_id', me)
     if (error) return setError(errorMessage(error))
     await reload()
@@ -93,7 +94,7 @@ export default function Groups() {
 
   async function share() {
     if (!selected) return
-    const text = `Únete a mi grupo "${selected.name}" en Habit League con el código: ${selected.invite_code}\n${appUrl()}`
+    const text = `Unite a mi grupo "${selected.name}" en Habit League con el código: ${selected.invite_code}\n${appUrl()}`
     try {
       if (navigator.share) await navigator.share({ text })
       else { await navigator.clipboard.writeText(selected.invite_code); setCopied(true); setTimeout(() => setCopied(false), 1500) }
@@ -113,9 +114,9 @@ export default function Groups() {
           <section className="card mb-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm text-slate-400">Código de invitación</p>
-                <p className="font-mono text-2xl font-bold tracking-widest text-emerald-400">{selected.invite_code}</p>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="text-sm text-muted">Código de invitación</p>
+                <p className="font-mono text-2xl font-bold tracking-widest text-primary">{selected.invite_code}</p>
+                <p className="mt-1 text-sm text-muted">
                   {members !== null && `${members} ${members === 1 ? 'miembro' : 'miembros'} · `}
                   Reto de {selected.duration_days} días desde el {new Date(selected.start_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}
                 </p>
@@ -149,11 +150,11 @@ export default function Groups() {
           </div>
           <button className="btn btn-primary w-full" disabled={busy}>Crear grupo</button>
         </form>
-        <p className="mt-2 text-xs text-slate-500">El reto empieza hoy. Solo cuenta el XP ganado dentro de esas fechas.</p>
+        <p className="mt-2 text-xs text-muted">El reto empieza hoy. Solo cuentan los puntos ganados dentro de esas fechas.</p>
       </section>
 
       {selected && (
-        <button className="btn btn-ghost w-full text-rose-300" onClick={leave}>Salir de “{selected.name}”</button>
+        <button className="btn btn-ghost w-full text-danger" onClick={leave}>Salir de “{selected.name}”</button>
       )}
     </>
   )

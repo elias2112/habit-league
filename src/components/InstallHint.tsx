@@ -38,13 +38,13 @@ export default function InstallHint() {
   if (!ios && !prompt) return null
 
   return (
-    <div className="mb-4 flex items-start gap-3 rounded-2xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm">
+    <div className="mb-4 flex items-start gap-3 rounded-2xl border border-primary/50 bg-primary/10 p-3 text-sm">
       <img src={`${import.meta.env.BASE_URL}apple-touch-icon.png`} alt="" className="h-10 w-10 rounded-xl" />
       <div className="flex-1">
-        <p className="font-semibold text-emerald-200">Instala Habit League</p>
+        <p className="font-semibold text-ink">Instalá Habit League</p>
         {ios ? (
-          <p className="mt-0.5 text-emerald-100/80">
-            En Safari toca{' '}
+          <p className="mt-0.5 text-muted">
+            En Safari tocá{' '}
             <svg viewBox="0 0 24 24" className="inline h-4 w-4 -translate-y-0.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-label="Compartir">
               <path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
             </svg>{' '}
@@ -56,7 +56,7 @@ export default function InstallHint() {
           </button>
         )}
       </div>
-      <button onClick={close} className="px-1 text-lg leading-none text-emerald-300/70" aria-label="Cerrar">×</button>
+      <button onClick={close} className="px-1 text-lg leading-none text-muted" aria-label="Cerrar">×</button>
     </div>
   )
 }

@@ -6,24 +6,28 @@ import type { Profile } from './types'
 interface AuthState {
   session: Session | null
   profile: Profile | null
+  /** Error al leer el perfil (p. ej. falta ejecutar la migración 002). */
+  profileError: string | null
   loading: boolean
   refreshProfile: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthState>({ session: null, profile: null, loading: true, refreshProfile: async () => {} })
+const AuthContext = createContext<AuthState>({
+  session: null, profile: null, profileError: null, loading: true, refreshProfile: async () => {},
+})
+
+const COLUMNS = 'id, username, display_name, timezone, archetype, area_scores, quiz_completed_at'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const loadProfile = useCallback(async (s: Session | null) => {
-    if (!s) { setProfile(null); return }
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, timezone')
-      .eq('id', s.user.id)
-      .maybeSingle()
+    if (!s) { setProfile(null); setProfileError(null); return }
+    const { data, error } = await supabase.from('profiles').select(COLUMNS).eq('id', s.user.id).maybeSingle()
+    setProfileError(error ? error.message : null)
     setProfile(data as Profile | null)
   }, [])
 
@@ -44,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = useCallback(() => loadProfile(session), [loadProfile, session])
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ session, profile, profileError, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

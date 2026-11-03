@@ -4,7 +4,10 @@ import { PGlite } from '@electric-sql/pglite'
 import { readFileSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
-const schema = readFileSync(new URL('../supabase/schema.sql', import.meta.url), 'utf8')
+// Mismo orden que en Supabase: esquema base y luego migraciones.
+const schema = ['../supabase/schema.sql', '../supabase/migrations/002_quiz_personas_puntos.sql']
+  .map((p) => readFileSync(new URL(p, import.meta.url), 'utf8'))
+  .join('\n')
 
 const STUB = `
 create role anon nologin;
@@ -145,7 +148,7 @@ describe('grupos y RLS', () => {
     await expect(as(B, `insert into habits (user_id, name) values ($1, 'x')`, [A])).rejects.toThrow(/row-level security/)
     const h = await habit(A)
     await expect(as(B, `select set_habit_done($1, true)`, [h])).rejects.toThrow(/row-level security/)
-    await expect(as(B, `insert into habit_logs (habit_id, user_id, log_date) values ($1, $2, current_date)`, [h, B])).rejects.toThrow(/row-level security/)
+    await expect(as(B, `insert into habit_logs (habit_id, user_id, log_date) values ($1, $2, current_date)`, [h, B])).rejects.toThrow(/row-level security|día de hoy/)
   })
 
   it('salir del grupo quita el acceso', async () => {
@@ -195,7 +198,7 @@ describe('checks del día', () => {
 
   it('no se puede insertar ni borrar un check de un día pasado', async () => {
     const h = await habit(A)
-    await expect(as(A, `insert into habit_logs (habit_id, user_id, log_date) values ($1, $2, user_today($2) - 1)`, [h, A])).rejects.toThrow(/row-level security/)
+    await expect(as(A, `insert into habit_logs (habit_id, user_id, log_date) values ($1, $2, user_today($2) - 1)`, [h, A])).rejects.toThrow(/row-level security|día de hoy/)
     await admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2) - 1)`, [h, A])
     await as(A, `delete from habit_logs where habit_id = $1`, [h])
     expect(await admin(`select * from habit_logs`)).toHaveLength(1)
@@ -275,45 +278,135 @@ describe('racha (streak_as_of)', () => {
   })
 })
 
-describe('ranking (group_leaderboard)', () => {
-  it('suma XP dentro de la ventana del reto y ordena', async () => {
-    const g = await groupAB()
-    const [{ start }] = await admin<{ start: string }>(`select start_date::text start from groups where id = $1`, [g.id])
-    await admin(`update groups set duration_days = 3 where id = $1`, [g.id])
-    const ha = await habit(A, 'Leer', 10)
-    const hb = await habit(B, 'Correr', 30)
-    await admin(`insert into habit_logs (habit_id, log_date) values
-      ($1, $3::date), ($1, $3::date + 1),
-      ($1, $3::date - 1),           -- antes del reto: no cuenta
-      ($1, $3::date + 3),           -- después del reto: no cuenta
-      ($2, $3::date)`, [ha, hb, start])
-    const rows = await as<{ username: string; total_xp: string; user_id: string }>(A, `select * from group_leaderboard($1)`, [g.id])
-    expect(rows.map((r) => [r.user_id, Number(r.total_xp)])).toEqual([[B, 30], [A, 20]])
+async function habitT(user: string, name: string, tier: number) {
+  const [h] = await as<{ id: string }>(user, `insert into habits (user_id, name, tier) values ($1, $2, $3) returning id`, [user, name, tier])
+  return h.id
+}
+const pts = async (user: string) =>
+  Number((await admin<{ s: string }>(`select coalesce(sum(points),0)::text s from habit_logs where user_id = $1 and log_date = user_today($1)`, [user]))[0].s)
+
+describe('puntos normalizados (002)', () => {
+  it('puntos = 100 * tier / suma de tiers activos; día perfecto ≈ 100', async () => {
+    const h1 = await habitT(A, 'Caminar', 1)
+    const h2 = await habitT(A, 'Leer', 2)
+    const h3 = await habitT(A, 'Fuerza', 3)
+    await as(A, `select set_habit_done($1, true)`, [h1])
+    expect(await pts(A)).toBeCloseTo(16.67, 2)
+    await as(A, `select set_habit_done($1, true)`, [h2])
+    await as(A, `select set_habit_done($1, true)`, [h3])
+    expect(await pts(A)).toBeCloseTo(100, 1)
   })
 
-  it('miembros sin registros aparecen con 0 XP y racha 0; empate ordena por username', async () => {
+  it('el cliente no puede fijar sus propios puntos', async () => {
+    const h = await habitT(A, 'Caminar', 1)
+    await habitT(A, 'Leer', 1)
+    await as(A, `insert into habit_logs (habit_id, user_id, log_date, points) values ($1, $2, user_today($2), 999)`, [h, A])
+    expect(await pts(A)).toBe(50)
+  })
+
+  it('tope de 100 por día aunque se agreguen hábitos a mitad de día', async () => {
+    const h1 = await habitT(A, 'Uno', 1)
+    await as(A, `select set_habit_done($1, true)`, [h1]) // único hábito: 100
+    const h2 = await habitT(A, 'Dos', 3)
+    await as(A, `select set_habit_done($1, true)`, [h2]) // valdría 75, el tope deja 0
+    expect(await pts(A)).toBe(100)
+  })
+
+  it('desmarcar y volver a marcar recalcula sin pasar de 100', async () => {
+    const h1 = await habitT(A, 'Uno', 1)
+    const h2 = await habitT(A, 'Dos', 1)
+    await as(A, `select set_habit_done($1, true)`, [h1])
+    await as(A, `select set_habit_done($1, false)`, [h1])
+    await as(A, `select set_habit_done($1, true)`, [h1])
+    await as(A, `select set_habit_done($1, true)`, [h2])
+    expect(await pts(A)).toBe(100)
+  })
+
+  it('los hábitos archivados no cuentan en la suma de tiers', async () => {
+    const h1 = await habitT(A, 'Activo', 1)
+    const h2 = await habitT(A, 'Archivado', 3)
+    await as(A, `update habits set archived = true where id = $1`, [h2])
+    await as(A, `select set_habit_done($1, true)`, [h1])
+    expect(await pts(A)).toBe(100)
+  })
+
+  it('el trigger rechaza días pasados en peticiones de usuario', async () => {
+    const h = await habitT(A, 'Uno', 1)
+    await expect(as(A, `insert into habit_logs (habit_id, user_id, log_date) values ($1, $2, user_today($2) - 1)`, [h, A]))
+      .rejects.toThrow(/día de hoy|row-level security/)
+  })
+
+  it('cada uno guarda su resultado del quiz y no puede tocar el de otro', async () => {
+    await as(A, `update profiles set archetype = 'arquitecto', area_scores = '{"cuerpo":2}', quiz_completed_at = now() where id = $1`, [A])
+    await as(A, `update profiles set archetype = 'hack' where id = $1`, [B])
+    const rows = await admin<{ archetype: string | null }>(`select archetype from profiles where id in ($1, $2) order by id`, [A, B])
+    expect(rows.map((r) => r.archetype)).toEqual(['arquitecto', null])
+  })
+})
+
+describe('ranking (group_leaderboard)', () => {
+  type Row = { user_id: string; total_points: string; max_points: string; pct: string | null; streak: number; username: string; archetype: string | null }
+
+  it('suma puntos dentro de la ventana del reto, calcula max y pct', async () => {
     const g = await groupAB()
-    const rows = await as<{ total_xp: string; streak: number; username: string }>(B, `select * from group_leaderboard($1)`, [g.id])
+    await admin(`update groups set start_date = user_today($2) - 2, duration_days = 3 where id = $1`, [g.id, A])
+    await admin(`update group_members set joined_at = now() - interval '5 days' where group_id = $1`, [g.id])
+    const ha = await habitT(A, 'Leer', 1)
+    const hb = await habitT(B, 'Correr', 1)
+    await admin(`insert into habit_logs (habit_id, log_date) values
+      ($1, user_today($3) - 2), ($1, user_today($3) - 1),
+      ($1, user_today($3) - 3),
+      ($2, user_today($3))`, [ha, hb, A]) // el de hace 3 días es antes del reto: no cuenta
+    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
+    expect(rows.map((r) => [r.user_id, Number(r.total_points), Number(r.max_points)])).toEqual([[A, 200, 300], [B, 100, 300]])
+    expect(Number(rows[0].pct)).toBeCloseTo(66.7, 1)
+  })
+
+  it('quien entra tarde se compara por pct sobre sus propios días', async () => {
+    const g = await groupAB()
+    await admin(`update groups set start_date = user_today($2) - 9 where id = $1`, [g.id, A])
+    await admin(`update group_members set joined_at = now() - interval '20 days' where user_id = $1`, [A])
+    const hb = await habitT(B, 'Correr', 1) // B entró hoy
+    await as(B, `select set_habit_done($1, true)`, [hb])
+    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
+    const a = rows.find((r) => r.user_id === A)!
+    const b = rows.find((r) => r.user_id === B)!
+    expect([Number(b.max_points), Number(b.pct)]).toEqual([100, 100])
+    expect([Number(a.max_points), Number(a.pct)]).toEqual([1000, 0])
+  })
+
+  it('reto que aún no empezó: max 0 y pct null', async () => {
+    const g = await groupAB()
+    await admin(`update groups set start_date = user_today($2) + 3 where id = $1`, [g.id, A])
+    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
+    expect(rows.every((r) => Number(r.max_points) === 0 && r.pct === null)).toBe(true)
+  })
+
+  it('miembros sin registros aparecen con 0 y racha 0; empate ordena por username', async () => {
+    const g = await groupAB()
+    const rows = await as<Row>(B, `select * from group_leaderboard($1)`, [g.id])
     expect(rows).toHaveLength(2)
-    expect(rows.every((r) => Number(r.total_xp) === 0 && r.streak === 0)).toBe(true)
+    expect(rows.every((r) => Number(r.total_points) === 0 && r.streak === 0)).toBe(true)
     expect(rows.map((r) => r.username)).toEqual([...rows.map((r) => r.username)].sort())
   })
 
-  it('la racha del ranking refleja el check de hoy', async () => {
+  it('la racha refleja el check de hoy y se ve el arquetipo', async () => {
     const g = await groupAB()
+    await admin(`update profiles set archetype = 'nomada' where id = $1`, [A])
     const h = await habit(A)
     await admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2) - 1)`, [h, A])
     await as(A, `select set_habit_done($1, true)`, [h])
-    const rows = await as<{ user_id: string; streak: number }>(B, `select * from group_leaderboard($1)`, [g.id])
-    expect(rows.find((r) => r.user_id === A)?.streak).toBe(2)
+    const rows = await as<Row>(B, `select * from group_leaderboard($1)`, [g.id])
+    expect(rows.find((r) => r.user_id === A)).toMatchObject({ streak: 2, archetype: 'nomada' })
   })
 
-  it('el feed muestra lo marcado por los miembros', async () => {
+  it('el feed muestra lo marcado por los miembros, con puntos y área', async () => {
     const g = await groupAB()
-    const h = await habit(B, 'Meditar', 15)
-    await as(B, `select set_habit_done($1, true)`, [h])
-    const feed = await as<{ habit_name: string; xp: number }>(A, `select * from group_feed($1)`, [g.id])
+    const [{ id }] = await as<{ id: string }>(B, `insert into habits (user_id, name, tier, area) values ($1, 'Meditar', 2, 'mente') returning id`, [B])
+    await as(B, `select set_habit_done($1, true)`, [id])
+    const feed = await as<{ habit_name: string; points: string; habit_area: string }>(A, `select * from group_feed($1)`, [g.id])
     expect(feed).toHaveLength(1)
-    expect(feed[0]).toMatchObject({ habit_name: 'Meditar', xp: 15 })
+    expect(feed[0]).toMatchObject({ habit_name: 'Meditar', habit_area: 'mente' })
+    expect(Number(feed[0].points)).toBe(100)
   })
 })

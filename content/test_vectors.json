@@ -1,0 +1,193 @@
+[
+  {
+    "name": "todo en el valor mas bajo, area cuerpo",
+    "answers": {
+      "q2": "a",
+      "q3": "a",
+      "q4": "a",
+      "q5": "a",
+      "q6": "a",
+      "q7": "a",
+      "q8": "a",
+      "q9": "a",
+      "q10": "a",
+      "q11": "a",
+      "q12": "a",
+      "q13": "a",
+      "q14": "a",
+      "q15": "a",
+      "q16": "a",
+      "q17": "a",
+      "q18": "a",
+      "q19": "a",
+      "q20": "a",
+      "q1": [
+        "a"
+      ]
+    },
+    "expected": {
+      "axes": {
+        "E": 0,
+        "M": 0,
+        "R": 0
+      },
+      "code": "emr",
+      "archetype": "espiritu_libre",
+      "priority": {
+        "cuerpo": 5,
+        "mente": 0,
+        "sueno": 0,
+        "alimentacion": 0,
+        "foco": 0,
+        "social": 0
+      },
+      "level": {
+        "cuerpo": 0,
+        "mente": 0,
+        "sueno": 0,
+        "alimentacion": 0,
+        "foco": 0,
+        "social": 0
+      },
+      "areas": [
+        "cuerpo"
+      ],
+      "habits": [
+        "caminar_30",
+        "estirar_10",
+        "ejercicio_20"
+      ]
+    }
+  },
+  {
+    "name": "todo en el valor mas alto, mente y foco",
+    "answers": {
+      "q2": "d",
+      "q3": "d",
+      "q4": "d",
+      "q5": "d",
+      "q6": "d",
+      "q7": "d",
+      "q8": "d",
+      "q9": "d",
+      "q10": "d",
+      "q11": "d",
+      "q12": "d",
+      "q13": "d",
+      "q14": "d",
+      "q15": "d",
+      "q16": "d",
+      "q17": "d",
+      "q18": "d",
+      "q19": "d",
+      "q20": "d",
+      "q1": [
+        "b",
+        "e"
+      ]
+    },
+    "expected": {
+      "axes": {
+        "E": 12,
+        "M": 12,
+        "R": 12
+      },
+      "code": "EMR",
+      "archetype": "arquitecto",
+      "priority": {
+        "cuerpo": 0,
+        "mente": 3,
+        "sueno": 0,
+        "alimentacion": 2,
+        "foco": 3,
+        "social": 0
+      },
+      "level": {
+        "cuerpo": 3,
+        "mente": 3,
+        "sueno": 3,
+        "alimentacion": 3,
+        "foco": 3,
+        "social": 3
+      },
+      "areas": [
+        "mente",
+        "foco",
+        "alimentacion"
+      ],
+      "habits": [
+        "meditar_15",
+        "bloque_profundo_45",
+        "sin_ultraprocesados",
+        "leer_15",
+        "tarea_dificil"
+      ]
+    }
+  },
+  {
+    "name": "valores medios altos, cuerpo/sueno/social",
+    "answers": {
+      "q2": "c",
+      "q3": "c",
+      "q4": "c",
+      "q5": "c",
+      "q6": "c",
+      "q7": "c",
+      "q8": "c",
+      "q9": "c",
+      "q10": "c",
+      "q11": "c",
+      "q12": "c",
+      "q13": "c",
+      "q14": "c",
+      "q15": "c",
+      "q16": "c",
+      "q17": "c",
+      "q18": "c",
+      "q19": "c",
+      "q20": "c",
+      "q1": [
+        "a",
+        "c",
+        "f"
+      ]
+    },
+    "expected": {
+      "axes": {
+        "E": 8,
+        "M": 8,
+        "R": 8
+      },
+      "code": "EMR",
+      "archetype": "arquitecto",
+      "priority": {
+        "cuerpo": 3,
+        "mente": 0,
+        "sueno": 5,
+        "alimentacion": 0,
+        "foco": 0,
+        "social": 3
+      },
+      "level": {
+        "cuerpo": 2,
+        "mente": 2,
+        "sueno": 2,
+        "alimentacion": 2,
+        "foco": 2,
+        "social": 2
+      },
+      "areas": [
+        "sueno",
+        "cuerpo",
+        "social"
+      ],
+      "habits": [
+        "despertar_fijo",
+        "ejercicio_20",
+        "llamada_10",
+        "pantallas_off_30",
+        "caminar_30"
+      ]
+    }
+  }
+]
