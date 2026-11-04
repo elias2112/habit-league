@@ -11,15 +11,15 @@ Lee antes de empezar:
 Los nombres y textos de arquetipos, quiz y hábitos están redactados sin género gramatical (Estratega, Perfeccionista, Aprendiz, Fénix, Autodidacta, Velocista, Nómada, Espíritu Libre). En la UI mostrar el nombre sin artículo ("Sos Estratega") y mantener esa convención en todo texto nuevo. Los emblemas están en `assets/arquetipos/<id>.svg` (copiados a `public/arquetipos/` para servirlos); el radar de referencia en `assets/radar-ejemplo.svg` (ver `docs/DESIGN.md`).
 
 ## Contenido como datos
-`content/quiz.json`, `content/archetypes.json`, `content/habits.json` y `content/goals.json` son la fuente de verdad. La app los importa (`src/lib/quiz.ts`, `src/lib/goals.ts`); no hardcodear preguntas ni hábitos en componentes. `content/test_vectors.json` trae entradas con la salida esperada; `tests/quiz.test.ts` verifica que el algoritmo las cumpla.
-- Al editar `content/habits.json`: correr `npm run catalog` (regenera el bloque del catálogo en la migración 003) y volver a ejecutar 003 en Supabase.
+`content/quiz.json`, `content/archetypes.json`, `content/habits.json`, `content/goals.json` y `content/judgment.json` (Juicio y liga, ver `docs/JUEGO.md`) son la fuente de verdad. La app los importa (`src/lib/quiz.ts`, `src/lib/goals.ts`); no hardcodear preguntas ni hábitos en componentes. `content/test_vectors.json` trae entradas con la salida esperada; `tests/quiz.test.ts` verifica que el algoritmo las cumpla.
+- Al editar `content/habits.json` o `content/judgment.json`: correr `npm run catalog` (regenera los bloques de datos de las migraciones 003 y 004) y volver a ejecutar esa migración en Supabase.
 - Hábitos nuevos del catálogo van con `auto: false` salvo que se quiera que entren al paquete automático (cambia la salida de los vectores).
 
 ## Stack
 - Vite + React + TypeScript, Tailwind CSS v4 (tokens de `docs/DESIGN.md` en `src/index.css`)
 - PWA con `vite-plugin-pwa`
 - Supabase (Auth, Postgres, Realtime, Storage) vía `@supabase/supabase-js`
-- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002_quiz_personas_puntos.sql`, `supabase/migrations/003_grupo_objetivos_fotos.sql`. Todas se pueden re-ejecutar. La clave en el cliente es la *publishable key*.
+- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002_quiz_personas_puntos.sql`, `supabase/migrations/003_grupo_objetivos_fotos.sql`, `supabase/migrations/004_liga_juicio_cofre.sql`. Todas se pueden re-ejecutar. La clave en el cliente es la *publishable key*.
 - Hosting: GitHub Pages vía Actions (`.github/workflows/deploy.yml`). La app vive bajo `/<repo>/`: usar `import.meta.env.BASE_URL` / `appUrl()`, nunca rutas absolutas `/...`.
 
 ## Reglas de trabajo
@@ -29,15 +29,18 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 - Toda tabla nueva lleva Row Level Security. Los datos de un usuario solo los ven él y quienes comparten grupo con él. Excepciones deliberadas: `profiles.quiz_answers` solo lo escribe su dueño y nadie lo lee desde la app; la tabla `habits` solo la lee su dueño (los compañeros la ven vía RPC, con los privados enmascarados).
 - Supabase ya no expone tablas nuevas de `public` automáticamente: toda tabla o columna editable nueva necesita `grant` explícito a `authenticated`; nada para `anon`; toda función nueva `revoke execute ... from public, anon`.
 - Los checks (`habit_logs`) solo se escriben vía RPC (`set_habit_done`, `add_habit_progress`, `set_log_photo`). Los puntos los calcula la base (trigger `set_log_points`); el cliente nunca envía puntos.
+- La liga (PL, ascensos) y el Juicio se calculan en la base (`league_sync`, `submit_judgment`); el cliente nunca envía PL. Los 100 puntos diarios del reto no dependen de la liga.
 - Nunca commitear claves. Usar `.env.local` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) y mantener `.env.example`. La clave `service_role` jamás va en el cliente.
 - El quiz es un juego propio, no un test psicológico validado. No presentarlo como diagnóstico ni inventar estudios o porcentajes de eficacia.
 - Si algo no está definido en `docs/PRODUCT.md` (marcado [ABIERTO]), preguntar al dueño en vez de decidir en silencio.
 - Verificar límites o precios de servicios externos con búsqueda antes de depender de ellos.
-- `npm test` debe pasar: `tests/sql.test.ts` (schema + 002 + 003 sobre PGlite con stub de auth y storage) y `tests/quiz.test.ts`.
+- `npm test` debe pasar: `tests/sql.test.ts` y `tests/league.test.ts` (migraciones sobre PGlite con stub de auth y storage) y `tests/quiz.test.ts`.
 
 ## Pendientes conocidos
 - RLS, triggers y storage probados en PGlite con stubs; falta una prueba manual sobre Supabase real con dos cuentas.
 - Apple Health vía Atajos de iOS: propuesto, sin hacer.
+- Notificaciones push y temporadas de la liga: sin hacer (ver `docs/JUEGO.md`).
+- Admin: Elías resetea contraseñas desde el SQL Editor (README → Administración); nadie puede ver contraseñas.
 - Fotos: 1 GB gratis de Storage y 5 GB/mes de transferencia; no hay borrado automático de fotos viejas.
 - La columna `habits.xp_value` (y `habit_logs.xp`) quedaron deprecadas; eliminarlas cuando se confirme que no se usan.
 - Mínimo de 3 hábitos activos: solo lo exige la UI.

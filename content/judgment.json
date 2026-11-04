@@ -1,0 +1,89 @@
+{
+  "version": "0.1",
+  "note": "Juicio del día (docs/JUEGO.md). Se responde a la mañana sobre AYER. type: yesno (params yes/no), count (zero, free, per_unit, min) o money (zero, per_5, cap; en €). category decide qué etapa lo potencia: camello=habitos, leon=vicio, nino=disfrute y bonus (x1,5 sobre lo positivo). condition: se pregunta según el quiz (q21/q22) salvo que la persona lo active o desactive en su perfil. Los valores son de juego, no recomendaciones de salud. Se copia a la base con `npm run catalog`.",
+  "questions": [
+    {
+      "id": "comida",
+      "text": "¿Comiste mal ayer (chatarra, atracón, nada de verdura)?",
+      "type": "yesno",
+      "category": "vicio",
+      "params": { "yes": -5, "no": 2 }
+    },
+    {
+      "id": "fumar",
+      "text": "¿Fumaste o vapeaste ayer? ¿Cuántos cigarrillos o sesiones?",
+      "hint": "Contá cada cigarrillo o cada vez que agarraste el vaper.",
+      "type": "count",
+      "unit": "cigarrillos",
+      "category": "vicio",
+      "params": { "zero": 3, "free": 0, "per_unit": -1, "min": -10 },
+      "condition": { "quiz": "q21", "in": ["b", "c", "d"], "opt": "fumar" }
+    },
+    {
+      "id": "alcohol",
+      "text": "¿Tomaste alcohol ayer? ¿Cuántos tragos?",
+      "hint": "Hasta 2 no restan.",
+      "type": "count",
+      "unit": "tragos",
+      "category": "vicio",
+      "params": { "zero": 2, "free": 2, "per_unit": -2, "min": -10 },
+      "condition": { "quiz": "q22", "in": ["b", "c", "d"], "opt": "alcohol" }
+    },
+    {
+      "id": "gasto",
+      "text": "¿Gastaste en algo que no necesitabas? ¿Cuánto?",
+      "hint": "Ese gasto alimenta al Dragón.",
+      "type": "money",
+      "category": "dinero",
+      "params": { "zero": 2, "per_5": -1, "cap": -10 }
+    },
+    {
+      "id": "ahorro",
+      "text": "¿Ahorraste algo aparte de tus hábitos? ¿Cuánto?",
+      "hint": "Lo podés guardar en uno de tus cofres.",
+      "type": "money",
+      "category": "dinero",
+      "params": { "zero": 0, "per_5": 1, "cap": 10 }
+    },
+    {
+      "id": "disfrute",
+      "text": "¿Hiciste algo solo porque lo disfrutás?",
+      "type": "yesno",
+      "category": "disfrute",
+      "params": { "yes": 3, "no": 0 }
+    }
+  ],
+  "bonus_per_day": 2,
+  "bonus": [
+    { "id": "cama", "text": "¿Hiciste la cama?", "params": { "yes": 3, "no": 0 } },
+    { "id": "buena_accion", "text": "¿Hiciste una buena acción por alguien?", "params": { "yes": 3, "no": 0 } },
+    { "id": "ordenar", "text": "¿Ordenaste algo durante 10 minutos?", "params": { "yes": 3, "no": 0 } },
+    { "id": "familia", "text": "¿Hablaste con alguien de tu familia?", "params": { "yes": 3, "no": 0 } },
+    { "id": "aprender", "text": "¿Aprendiste algo nuevo?", "params": { "yes": 3, "no": 0 } },
+    { "id": "sin_auriculares", "text": "¿Caminaste un rato sin auriculares ni celular?", "params": { "yes": 3, "no": 0 } },
+    { "id": "cocinar_otros", "text": "¿Cocinaste o preparaste algo para otra persona?", "params": { "yes": 3, "no": 0 } },
+    { "id": "cumplido", "text": "¿Le hiciste un cumplido sincero a alguien?", "params": { "yes": 3, "no": 0 } },
+    { "id": "sin_quejas", "text": "¿Pasaste el día sin quejarte?", "params": { "yes": 3, "no": 0 } },
+    { "id": "comida_sin_celular", "text": "¿Comiste al menos una vez sin el celular?", "params": { "yes": 3, "no": 0 } },
+    { "id": "agua_despertar", "text": "¿Tomaste un vaso de agua al despertar?", "params": { "yes": 3, "no": 0 } },
+    { "id": "luz_natural", "text": "¿Te diste 10 minutos de luz natural a la mañana?", "params": { "yes": 3, "no": 0 } }
+  ],
+  "league": {
+    "stages": [
+      { "id": "camello", "name": "Camello", "emoji": "🐪", "boost": ["habitos"], "theme": "Disciplina: cargás el plan y lo cumplís." },
+      { "id": "leon", "name": "León", "emoji": "🦁", "boost": ["vicio"], "theme": "Destrucción: le decís que no a lo que te frena." },
+      { "id": "nino", "name": "Niño", "emoji": "🧒", "boost": ["disfrute", "bonus"], "theme": "Disfrute: jugás, creás y empezás de nuevo." },
+      { "id": "zaratustra", "name": "Zaratustra", "emoji": "✨", "boost": [], "theme": "Lo sostenés todo." }
+    ],
+    "boost_factor": 1.5,
+    "shield_days": 3,
+    "demote_to_pl": 75,
+    "trials": {
+      "camello": "7 días seguidos con al menos 70 puntos",
+      "leon": "10 días limpios en el Juicio en las últimas 2 semanas",
+      "nino": "Completar un objetivo y una racha de 21 días"
+    },
+    "milestones": { "25": 5, "50": 10, "75": 15, "100": 30 },
+    "weekly_chest_bonus": 5
+  }
+}

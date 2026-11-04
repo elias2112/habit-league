@@ -8,6 +8,7 @@ import { areaStyle } from '../lib/areas'
 import type { FeedRow, GroupReview } from '../lib/types'
 import { TIER_LABEL } from '../lib/quiz'
 import EvidencePhoto from '../components/EvidencePhoto'
+import GroupChests from '../components/GroupChests'
 import { AreaIcon, ErrorBox, PageHeader, Spinner, Tier } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 
@@ -221,6 +222,8 @@ export default function Groups() {
           </section>
 
           <Reviews groupId={selected.id} me={me} />
+
+          <GroupChests groupId={selected.id} me={me} />
 
           <section className="card mb-4">
             <h2 className="mb-2 font-semibold">Actividad del grupo</h2>

@@ -9,6 +9,9 @@ import { uploadEvidence } from '../lib/photos'
 import { reviewBadge, useMyReviews } from '../lib/reviews'
 import type { Habit } from '../lib/types'
 import EvidencePhoto from '../components/EvidencePhoto'
+import Judgment from '../components/Judgment'
+import LeagueBadge from '../components/LeagueBadge'
+import { signed, useLeague, type JudgmentToday } from '../lib/league'
 import { AreaIcon, Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Tier } from '../components/ui'
 
 interface Log { habit_id: string; points: number; count: number; target: number; photo_path: string | null }
@@ -30,6 +33,24 @@ export default function Today() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { byHabit, reload: reloadReviews } = useMyReviews()
+  const league = useLeague()
+  const [judgment, setJudgment] = useState<JudgmentToday | null>(null)
+  const [judging, setJudging] = useState(false)
+
+  // El Juicio de ayer: se abre solo una vez por día; si se cierra con "Después", queda la tarjeta.
+  useEffect(() => {
+    if (!league.state) return
+    supabase.rpc('judgment_today').then(({ data }) => {
+      const j = data as JudgmentToday | null
+      if (!j) return
+      setJudgment(j)
+      const key = 'hl:judgmentPrompted:' + j.day
+      let prompted = false
+      try { prompted = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1') } catch { /* sin almacenamiento */ }
+      if (j.available && !j.submitted && !prompted) setJudging(true)
+    })
+  }, [league.state])
+
 
   const load = useCallback(async () => {
     try {
@@ -123,6 +144,30 @@ export default function Today() {
           Tu perfil usa la zona <b>{profile.timezone}</b> y este dispositivo está en <b>{deviceTz}</b>.{' '}
           <Link to="/perfil" className="underline">Cambiar</Link>
         </p>
+      )}
+
+      {league.state && (
+        <section className="card mb-3">
+          <LeagueBadge s={league.state} />
+          {judgment?.available && (
+            judgment.submitted ? (
+              <p className="mt-3 text-sm text-muted">⚖️ Juicio de ayer: <b className={(judgment.total ?? 0) >= 0 ? 'text-alimentacion' : 'text-danger'}>{signed(judgment.total ?? 0)} PL</b></p>
+            ) : (
+              <button className="btn btn-primary mt-3 w-full" onClick={() => setJudging(true)}>⚖️ Responder el Juicio de ayer</button>
+            )
+          )}
+        </section>
+      )}
+
+      {judging && judgment && (
+        <Judgment
+          data={judgment}
+          before={league.state}
+          onClose={(s) => {
+            setJudging(false)
+            if (s) { league.setState(s); void supabase.rpc('judgment_today').then(({ data }) => setJudgment(data as JudgmentToday)) }
+          }}
+        />
       )}
 
       <section className="card mb-5">

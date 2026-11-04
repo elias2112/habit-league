@@ -5,6 +5,7 @@ import { errorMessage } from '../lib/errors'
 import { todayIn } from '../lib/date'
 import { GOAL_KINDS, detectKind, goalKind, planGoal, type GoalKind } from '../lib/goals'
 import type { Goal } from '../lib/types'
+import judgmentData from '../../content/judgment.json'
 import { AreaIcon, Bar, Empty, ErrorBox, Spinner, Tier } from './ui'
 
 const fmt = (n: number) => Math.round(n).toLocaleString('es-ES')
@@ -146,7 +147,7 @@ function GoalCard({ g, onChange }: { g: Goal; onChange: () => void }) {
         <span className="font-black text-xp">{fmt(g.progress)}</span>
         <span className="text-muted"> / {fmt(g.target)} {g.unit}</span>
       </p>
-      <div className="mt-2"><Bar value={pct} max={100} className={done ? 'bg-alimentacion' : 'bg-xp'} /></div>
+      {g.kind === 'ahorro' ? <Chest pct={pct} /> : <div className="mt-2"><Bar value={pct} max={100} className={done ? 'bg-alimentacion' : 'bg-xp'} /></div>}
       {g.deadline && <p className="mt-1 text-xs text-muted">Hasta el {new Date(g.deadline + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}</p>}
       <ErrorBox>{error}</ErrorBox>
       {adding ? (
@@ -202,5 +203,34 @@ export default function Goals() {
         La barra suma lo que marcás en el hábito del objetivo (cada check de ahorro = la cuota diaria; páginas y palabras, lo que cargues) más lo que agregues a mano.
       </p>
     </>
+  )
+}
+
+const MILESTONE_PL = Object.fromEntries(Object.entries(judgmentData.league.milestones).map(([k, v]) => [Number(k), v])) as Record<number, number>
+const MILESTONES = Object.keys(MILESTONE_PL).map(Number).sort((a, b) => a - b)
+
+/** Cofre de ahorro: se llena de monedas; cada hito (25/50/75/100 %) da PL en la liga una sola vez. */
+export function Chest({ pct }: { pct: number }) {
+  const coins = Math.round(pct / 10)
+  return (
+    <div className="mt-3">
+      <div className="flex items-end gap-3">
+        <span className="text-4xl" aria-hidden>{pct >= 100 ? '👑' : pct >= 50 ? '💰' : '🧰'}</span>
+        <span className="flex-1 truncate text-lg leading-none" aria-label={`${Math.round(pct)} % del cofre`}>
+          {'🪙'.repeat(coins)}<span className="opacity-20">{'🪙'.repeat(10 - coins)}</span>
+        </span>
+      </div>
+      <div className="relative mt-2">
+        <Bar value={pct} max={100} className="bg-xp" />
+        {MILESTONES.slice(0, 3).map((m) => (
+          <span key={m} className="absolute top-0 h-2.5 w-0.5 bg-bg" style={{ left: `${m}%` }} aria-hidden />
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-4 text-center text-[11px]">
+        {MILESTONES.map((m) => (
+          <span key={m} className={pct >= m ? 'font-bold text-xp' : 'text-muted'}>{pct >= m ? '✓ ' : ''}{m}% · +{MILESTONE_PL[m]} PL</span>
+        ))}
+      </div>
+    </div>
   )
 }

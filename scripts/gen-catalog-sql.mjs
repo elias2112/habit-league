@@ -1,25 +1,59 @@
-// Regenera el bloque del catálogo en la migración 003 a partir de content/habits.json.
-// Uso: npm run catalog   (después de editar content/habits.json, y volver a ejecutar 003 en Supabase)
+// Regenera los bloques de datos de las migraciones a partir de content/:
+//   003: catálogo de hábitos (content/habits.json)
+//   004: preguntas del Juicio y configuración de la liga (content/judgment.json)
+// Uso: npm run catalog   (después, volver a ejecutar 003/004 en Supabase)
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const MIGRATION = 'supabase/migrations/003_grupo_objetivos_fotos.sql'
+const q = (v) =>
+  v == null ? 'null'
+  : typeof v === 'string' ? `'${v.replaceAll("'", "''")}'`
+  : typeof v === 'object' ? `'${JSON.stringify(v).replaceAll("'", "''")}'::jsonb`
+  : String(v)
+
+function replaceBlock(file, name, block) {
+  const sql = readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+  const re = new RegExp(`-- BEGIN ${name}[\\s\\S]*?-- END ${name}`)
+  if (!re.test(sql)) throw new Error(`No encontré los marcadores BEGIN/END ${name} en ${file}`)
+  writeFileSync(file, sql.replace(re, `-- BEGIN ${name} (generado por scripts/gen-catalog-sql.mjs; no editar a mano)\n${block}\n-- END ${name}`))
+}
+
+// ── 003: catálogo
 const { habits } = JSON.parse(readFileSync('content/habits.json', 'utf8'))
-
-const q = (v) => (v == null ? 'null' : typeof v === 'string' ? `'${v.replaceAll("'", "''")}'` : String(v))
-const rows = habits.map((h) =>
+const catalogRows = habits.map((h) =>
   `  (${[h.id, h.area, h.name, h.criterion, h.tier, h.target ?? 1, h.unit ?? null, Boolean(h.private_default)].map(q).join(', ')})`)
-
-const block = [
-  '-- BEGIN CATALOG (generado por scripts/gen-catalog-sql.mjs; no editar a mano)',
+replaceBlock('supabase/migrations/003_grupo_objetivos_fotos.sql', 'CATALOG', [
   'insert into public.catalog_habits (id, area, name, criterion, tier, target, unit, private_default) values',
-  rows.join(',\n'),
+  catalogRows.join(',\n'),
   'on conflict (id) do update set area = excluded.area, name = excluded.name, criterion = excluded.criterion,',
   '  tier = excluded.tier, target = excluded.target, unit = excluded.unit, private_default = excluded.private_default;',
-  '-- END CATALOG',
-].join('\n')
+].join('\n'))
+console.log(`✓ ${habits.length} hábitos → 003`)
 
-const sql = readFileSync(MIGRATION, 'utf8')
-const re = /-- BEGIN CATALOG[\s\S]*?-- END CATALOG/
-if (!re.test(sql)) throw new Error('No encontré los marcadores BEGIN/END CATALOG en ' + MIGRATION)
-writeFileSync(MIGRATION, sql.replace(re, block))
-console.log(`✓ ${habits.length} hábitos escritos en ${MIGRATION}`)
+// ── 004: Juicio y liga
+const j = JSON.parse(readFileSync('content/judgment.json', 'utf8'))
+const qs = [
+  ...j.questions.map((x, i) => ({ ...x, kind: 'core', sort: i })),
+  ...j.bonus.map((x, i) => ({ ...x, kind: 'bonus', type: 'yesno', category: 'bonus', sort: i })),
+]
+const qRows = qs.map((x) =>
+  `  (${[x.id, x.kind, x.text, x.hint ?? null, x.type, x.unit ?? null, x.category, x.params, x.condition ?? null, x.sort].map(q).join(', ')})`)
+const config = {
+  bonus_per_day: j.bonus_per_day,
+  boost_factor: j.league.boost_factor,
+  shield_days: j.league.shield_days,
+  demote_to_pl: j.league.demote_to_pl,
+  milestones: j.league.milestones,
+  weekly_chest_bonus: j.league.weekly_chest_bonus,
+  stages: j.league.stages,
+}
+replaceBlock('supabase/migrations/004_liga_juicio_cofre.sql', 'JUDGMENT', [
+  'insert into public.judgment_questions (id, kind, text, hint, type, unit, category, params, condition, sort) values',
+  qRows.join(',\n'),
+  'on conflict (id) do update set kind = excluded.kind, text = excluded.text, hint = excluded.hint, type = excluded.type,',
+  '  unit = excluded.unit, category = excluded.category, params = excluded.params, condition = excluded.condition, sort = excluded.sort;',
+  `delete from public.judgment_questions where id not in (${qs.map((x) => q(x.id)).join(', ')});`,
+  'insert into public.game_config (key, value) values',
+  Object.entries(config).map(([k, v]) => `  (${q(k)}, '${JSON.stringify(v).replaceAll("'", "''")}'::jsonb)`).join(',\n'),
+  'on conflict (key) do update set value = excluded.value;',
+].join('\n'))
+console.log(`✓ ${qs.length} preguntas y ${Object.keys(config).length} valores de configuración → 004`)

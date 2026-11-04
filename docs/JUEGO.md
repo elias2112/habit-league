@@ -1,4 +1,4 @@
-# La Liga de las Tres Transformaciones (v0.1) [PROPUESTA — sin implementar]
+# La Liga de las Tres Transformaciones (v0.2) — implementada (migración 004)
 
 Capa de juego encima de los hábitos. Inspirada en la parábola de **las tres transformaciones del espíritu** de Nietzsche (*Así habló Zaratustra*, 1883): el **camello** carga y obedece, el **león** se rebela y dice "no", el **niño** juega y crea. Acá se traduce a **disciplina → destrucción (de vicios) → disfrute**. Es una lectura libre para un juego, no una interpretación académica.
 
@@ -26,7 +26,7 @@ Mecánica de ligas por divisiones (tipo ranked de videojuegos), con **nombres pr
 Al **abrir la app por primera vez en el día**, aparece un juicio corto sobre **ayer**. Funciona sin notificaciones; cuando haya push, se puede sumar un recordatorio a la noche.
 
 1. **Hábitos de ayer:** no se pregunta, se calcula (ya está registrado). "Ayer hiciste 4 de 5 → +8 PL".
-2. **Preguntas** (solo las que aplican según tu quiz; las podés activar o desactivar):
+2. **Preguntas** (solo las que aplican según tu quiz; las podés activar o desactivar en Perfil). Fuente: `content/judgment.json`:
 
 | Pregunta | Respuesta | PL |
 |---|---|---|
@@ -37,9 +37,12 @@ Al **abrir la app por primera vez en el día**, aparece un juicio corto sobre **
 | ¿Ahorraste algo? ¿Cuánto? | monto | +1 cada 5 € (máx. +10) |
 | ¿Hiciste algo solo porque lo disfrutás? | Sí / No | +3 / 0 |
 
-3. **Resultado:** total de PL del día con animación (sube o baja la barra de la división).
+3. **Misiones sorpresa:** 2 por día, al azar de una bolsa de 12 (hacer la cama, una buena acción, ordenar 10 minutos, hablar con la familia, aprender algo, caminar sin auriculares…). Sí = +3. Rotan durante la semana y son siempre las mismas para esa persona ese día.
+4. **Resultado:** total de PL con el veredicto; aviso si subiste o bajaste de división.
 
-Sistema de honor: el grupo ve solo el total ("Juicio: +12 PL") y tu rango, no el detalle.
+El primer día en la liga no hay Juicio (ayer todavía no jugabas). Si no lo respondés, ayer se cierra solo al día siguiente contando solo los hábitos.
+
+Sistema de honor: el grupo ve tu rango y el total ("Juicio: +12 PL"). Cada persona puede activar en Perfil "Mostrar el detalle de mi Juicio", y entonces el grupo ve también cada respuesta (incluido lo negativo).
 
 ## 3. PL del día
 
@@ -63,10 +66,15 @@ Multiplicador de la etapa (×1,5) sobre la parte que entrena esa etapa. Días si
 - Opcional en grupo: **cofre compartido** (ej. un viaje juntos), donde cada uno ve cuánto aportó el resto.
 - Todo es registro. La app nunca mueve plata real.
 
-## 5. Decisiones abiertas para el dueño
+## 5. Decisiones (dueño, 2026-11-04)
 
-1. ¿Los negativos del Juicio afectan **solo la liga** (propuesta) o también los 100 puntos diarios del ranking?
-2. ¿El Juicio se hace **a la mañana sobre ayer** (propuesta, funciona sin notificaciones) o a la noche?
-3. ¿El grupo ve **solo el total** del Juicio (propuesta) o también el detalle?
-4. ¿Valores de la tabla (−1 por pitada, −5 por comer mal…) y nombre del rango máximo ("Zaratustra")?
-5. ¿Cofre compartido de grupo: sí o no?
+1. Los negativos afectan **solo la liga**; los 100 puntos diarios y el ranking del reto no cambian.
+2. El Juicio es **a la mañana sobre ayer** (sin notificaciones por ahora).
+3. El grupo ve el total; cada persona puede **habilitar mostrar el detalle**, también lo negativo.
+4. Valores elegidos por Claude (tabla de arriba, editables en `content/judgment.json`), más **misiones sorpresa** positivas que rotan en la semana. Rango máximo: Zaratustra.
+5. **Cofre compartido de grupo: sí.**
+
+## 6. Pendiente
+
+- Notificaciones push (recordatorio a la mañana o a la noche).
+- Temporadas: reinicio de la liga al terminar el reto del grupo (hoy la liga es por persona y no se reinicia).

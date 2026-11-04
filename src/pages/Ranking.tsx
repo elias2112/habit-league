@@ -10,6 +10,7 @@ import type { LeaderboardRow } from '../lib/types'
 import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Spinner } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 import { MyRadar } from '../components/MyRadar'
+import LeagueTable from '../components/LeagueTable'
 import { emblemUrl } from '../components/ArchetypeCard'
 
 const medal = ['🥇', '🥈', '🥉']
@@ -22,6 +23,7 @@ export default function Ranking() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
+  const [tab, setTab] = useState<'points' | 'league'>('points')
 
   const load = useCallback(async () => {
     if (!selected) return
@@ -77,7 +79,18 @@ export default function Ranking() {
       {cd && !cd.finished && <div className="mb-4"><Bar value={cd.day} max={cd.total} className="bg-primary" /></div>}
       <ErrorBox>{error}</ErrorBox>
 
-      {loading ? (
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
+        {(['points', 'league'] as const).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+            className={`min-h-10 rounded-lg text-sm font-semibold ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>
+            {t === 'points' ? '🏆 Puntos del reto' : '🐪 Liga'}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'league' ? (
+        <LeagueTable groupId={selected.id} me={me} />
+      ) : loading ? (
         <div className="grid place-items-center pt-10"><Spinner /></div>
       ) : (
         <ol className="space-y-2">
@@ -116,9 +129,9 @@ export default function Ranking() {
           })}
         </ol>
       )}
-      <p className="mt-4 text-center text-xs text-muted">
+      {tab === 'points' && <p className="mt-4 text-center text-xs text-muted">
         Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Los hábitos propios suman acá solo si este grupo los aprobó. Tocá a alguien para ver su radar.
-      </p>
+      </p>}
     </>
   )
 }
