@@ -66,6 +66,7 @@ export interface LeaderboardRow {
   max_points: number
   pct: number | null
   streak: number
+  multiplier: number
 }
 
 export interface FeedRow {

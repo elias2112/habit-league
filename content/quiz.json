@@ -650,9 +650,8 @@
         {
           "id": "c",
           "text": "Todos los días",
-          "suggest": [
-            "fumar_menos"
-          ]
+          "suggest": [],
+          "vice": "fumar"
         },
         {
           "id": "d",
@@ -761,5 +760,5 @@
       ]
     }
   ],
-  "direct_note": "Preguntas directas (q21-q24): no cambian arquetipo ni áreas; solo agregan sugerencias al paquete. Las respuestas son privadas (solo las ve quien responde)."
+  "direct_note": "Preguntas directas (q21-q24): no cambian arquetipo ni áreas; solo agregan sugerencias al paquete (suggest = hábitos, vice = vicio a declarar). Las respuestas son privadas (solo las ve quien responde)."
 }

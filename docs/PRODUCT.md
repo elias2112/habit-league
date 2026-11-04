@@ -65,6 +65,9 @@ El video (5:30) muestra casi solo el **onboarding** de una app llamada "Life Res
 - Un hábito propio no se puede modificar después de creado (solo bajarle la dificultad): para cambiarlo, se archiva y se propone otro.
 - **Privados:** los hábitos del catálogo se pueden marcar como privados (el grupo ve "Hábito privado", sin nombre ni foto). Los propios no, porque el grupo tiene que poder aprobarlos.
 - **Objetivos:** una meta (comprar algo, leer, escribir, otra) arma un hábito diario a partir de la cantidad y la fecha, y muestra una barra de progreso. Plantillas en `content/goals.json` (sin IA, costo 0).
+- **Vicios** (decidido 2026-11-04, migración 005): un hábito malo que no querés dejar (ej. fumar) no es un hábito "para dejarlo": se **declara** y tus puntos diarios se multiplican por **×0,9 por cada vicio declarado** (2 = ×0,81). "Lo dejé" corta el multiplicador desde el día siguiente.
+- **Tropiezos:** algo puntual (ej. "Hoy tomé") **resta de ese día** (−5 a −15 según el vicio, una vez por día). Los vicios declarados no tienen tropiezos. Puntos del día = máx(0, hábitos × multiplicador − tropiezos). Valores en `content/vices.json`.
+- El ranking del reto y los PL de hábitos de la liga usan esos puntos ajustados. El grupo ve el multiplicador, no cuáles son los vicios ni los tropiezos.
 - **Respuestas del quiz privadas:** solo las ve quien respondió (las preguntas directas tocan temas como fumar o tomar alcohol).
 - El ranking muestra `total_points` y `pct` (puntos / máximo posible desde que el miembro entró), para comparar justo.
 - Un día cuenta para la **racha** si se completa **al menos un hábito** (completo, no parcial) [ABIERTO: ¿o todos?].

@@ -54,7 +54,7 @@ juicio  = suma de la tabla de arriba          → de −35 a +22 aprox.
 
 Multiplicador de la etapa (×1,5) sobre la parte que entrena esa etapa. Días sin abrir la app: solo cuenta la parte de hábitos (si no marcaste nada, −20).
 
-**El ranking de 100 puntos diarios no cambia:** sigue normalizado y justo entre amigos. Los negativos viven en la liga.
+**El Juicio no toca los 100 puntos diarios:** sus negativos viven en la liga. Los que sí ajustan los puntos diarios son los **vicios declarados** (×0,9 cada uno) y los **tropiezos** del día (ver `docs/PRODUCT.md`, migración 005); como la parte de hábitos de los PL usa esos puntos ajustados, también se notan en la liga.
 
 ## 4. El dinero como juego: el Cofre
 

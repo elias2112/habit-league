@@ -7,7 +7,7 @@ import habitsData from '../../content/habits.json'
 export type AreaId = 'cuerpo' | 'mente' | 'sueno' | 'alimentacion' | 'foco' | 'social'
 export type Axis = 'E' | 'M' | 'R'
 
-export interface QuizOption { id: string; text: string; area?: string; value?: number; suggest?: string[] }
+export interface QuizOption { id: string; text: string; area?: string; value?: number; suggest?: string[]; vice?: string }
 export interface QuizQuestion {
   id: string
   section: string
@@ -118,6 +118,16 @@ export function directSuggestions(answers: Answers): string[] {
   for (const q of QUESTIONS.filter((x) => x.section === 'directas')) {
     const o = q.options.find((x) => asList(answers[q.id]).includes(x.id))
     for (const id of o?.suggest ?? []) if (!out.includes(id) && catalogById(id)) out.push(id)
+  }
+  return out
+}
+
+/** Vicios que sugieren declarar las preguntas directas (ej. fumar todos los días sin querer dejar). */
+export function directVices(answers: Answers): string[] {
+  const out: string[] = []
+  for (const q of QUESTIONS.filter((x) => x.section === 'directas')) {
+    const o = q.options.find((x) => asList(answers[q.id]).includes(x.id))
+    if (o?.vice && !out.includes(o.vice)) out.push(o.vice)
   }
   return out
 }

@@ -1,0 +1,56 @@
+{
+  "version": "0.1",
+  "note": "Vicios (hábitos malos). Declarado = lo hacés y no lo querés dejar: tus puntos diarios se multiplican por 'multiplier' por cada vicio declarado (2 vicios = 0,9 × 0,9 = 0,81). Tropiezo = pasó hoy (ej. 'Hoy tomé'): resta 'slip_penalty' puntos de ese día, una vez por vicio y por día. Un vicio declarado no tiene tropiezos (ya pagás el multiplicador); los vicios propios (fuera de la lista) solo se declaran. Valores de juego, editables; no son recomendaciones de salud. Se copia a la base con `npm run catalog`.",
+  "multiplier": 0.9,
+  "vices": [
+    {
+      "id": "fumar",
+      "name": "Fumar o vapear",
+      "area": "cuerpo",
+      "slip": "Hoy fumé",
+      "slip_penalty": 10
+    },
+    {
+      "id": "alcohol",
+      "name": "Tomar alcohol",
+      "area": "alimentacion",
+      "slip": "Hoy tomé",
+      "slip_penalty": 15
+    },
+    {
+      "id": "chatarra",
+      "name": "Comida chatarra o delivery",
+      "area": "alimentacion",
+      "slip": "Hoy comí chatarra",
+      "slip_penalty": 10
+    },
+    {
+      "id": "dulces",
+      "name": "Dulces y gaseosas",
+      "area": "alimentacion",
+      "slip": "Hoy me pasé con lo dulce",
+      "slip_penalty": 5
+    },
+    {
+      "id": "redes",
+      "name": "Redes sociales de más",
+      "area": "mente",
+      "slip": "Hoy me pasé con las redes",
+      "slip_penalty": 5
+    },
+    {
+      "id": "trasnochar",
+      "name": "Trasnochar",
+      "area": "sueno",
+      "slip": "Anoche me acosté muy tarde",
+      "slip_penalty": 10
+    },
+    {
+      "id": "apuestas",
+      "name": "Apuestas",
+      "area": "foco",
+      "slip": "Hoy aposté",
+      "slip_penalty": 15
+    }
+  ]
+}

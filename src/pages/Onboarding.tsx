@@ -4,10 +4,11 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import {
-  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, directSuggestions, isAnswered, pointsFor,
+  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, directSuggestions, directVices, isAnswered, pointsFor,
   type Answers, type QuizResult,
 } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
+import { VICE_MULTIPLIER, fmtMult, viceById } from '../lib/vices'
 import Radar, { levelsToRadar } from '../components/Radar'
 import CatalogPicker from '../components/CatalogPicker'
 import { AreaIcon, ErrorBox, Tier } from '../components/ui'
@@ -52,6 +53,7 @@ export default function Onboarding() {
   const [index, setIndex] = useState(draft.index)
   const [result, setResult] = useState<QuizResult | null>(null)
   const [pack, setPack] = useState<Set<string>>(new Set())
+  const [vices, setVices] = useState<Set<string>>(new Set())
   const [existing, setExisting] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,6 +85,7 @@ export default function Onboarding() {
     const r = computeProfile(a)
     setResult(r)
     setPack(new Set([...r.habits, ...directSuggestions(a)]))
+    setVices(new Set(directVices(a)))
     setStep('result')
   }
 
@@ -114,6 +117,11 @@ export default function Onboarding() {
         quiz_completed_at: new Date().toISOString(),
       }).eq('id', me)
       if (error) throw error
+      // Vicios que no se quieren dejar: se declaran (×0,9 en los puntos diarios).
+      for (const v of vices) {
+        const { error: ev } = await supabase.rpc('declare_vice', { p_vice: v, p_name: null })
+        if (ev && !/Ya tenés declarado/.test(ev.message)) throw ev
+      }
       saveDraft(null)
       const { count } = await supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', me)
       if (count) { await refreshProfile(); navigate('/', { replace: true }) }
@@ -258,6 +266,19 @@ export default function Onboarding() {
           </ul>
         )}
         {existing.size > 0 && <p className="mt-2 text-xs text-muted">Además ya tenés {existing.size} hábitos activos del catálogo.</p>}
+        {[...directVices(answers)].length > 0 && (
+          <div className="mt-4 rounded-2xl border border-danger/40 bg-danger/10 p-3">
+            <p className="text-sm font-semibold">Vicios que no querés dejar</p>
+            <p className="text-xs text-muted">No son hábitos para cumplir: si los declarás, tus puntos diarios se multiplican por {fmtMult(VICE_MULTIPLIER)} por cada uno. Es privado.</p>
+            {directVices(answers).map((id) => (
+              <label key={id} className="mt-2 flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={vices.has(id)}
+                  onChange={(e) => { const n = new Set(vices); if (e.target.checked) n.add(id); else n.delete(id); setVices(n) }} />
+                Declarar «{viceById(id)?.name ?? id}» ({fmtMult(VICE_MULTIPLIER)})
+              </label>
+            ))}
+          </div>
+        )}
 
         <h2 className="mb-3 mt-8 text-lg font-bold">Agregar del catálogo</h2>
         <CatalogPicker

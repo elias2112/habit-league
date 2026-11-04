@@ -16,11 +16,11 @@
 
 ## Preguntas directas (q21–q24)
 
-Cuatro preguntas más directas (fumar o vapear, alcohol, redes, delivery). **No cambian el arquetipo ni las áreas**: cada opción trae una lista `suggest` de hábitos del catálogo que se agregan al paquete sugerido (la persona los puede quitar). Las respuestas son privadas. Los hábitos de fumar y alcohol se crean como privados por defecto (`private_default`).
+Cuatro preguntas más directas (fumar o vapear, alcohol, redes, delivery). **No cambian el arquetipo ni las áreas**: cada opción trae una lista `suggest` de hábitos del catálogo que se agregan al paquete sugerido, o un `vice` para declarar (ver `content/vices.json`); la persona los puede quitar. Las respuestas son privadas. Los hábitos de fumar y alcohol se crean como privados por defecto (`private_default`).
 
 | Pregunta | Sugiere |
 |---|---|
-| ¿Fumás o vapeás? | A veces → Día sin fumar · A diario (o quiero dejar) → Fumar menos que ayer |
+| ¿Fumás o vapeás? | A veces → Día sin fumar · Todos los días → declarar el vicio Fumar (×0,9, sin hábito) · Todos los días y quiero dejar → Fumar menos que ayer |
 | ¿Cuántos días por semana tomás alcohol? | 3–4 → Día sin alcohol · 5 o más → Máximo 2 tragos |
 | ¿Cuántas horas por día en redes? | 2–4 h → Menos de 2 h de redes · Más de 4 h → además, Sin celular la primera hora |
 | ¿Cuántas veces por semana delivery o comida rápida? | 3 o más → Día sin delivery |

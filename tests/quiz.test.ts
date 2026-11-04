@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import vectors from '../content/test_vectors.json'
-import { ARCHETYPES, CATALOG, QUESTIONS, computeProfile, directSuggestions, pointsFor, type Answers } from '../src/lib/quiz'
+import vicesJson from '../content/vices.json'
+import { ARCHETYPES, CATALOG, QUESTIONS, computeProfile, directSuggestions, directVices, pointsFor, type Answers } from '../src/lib/quiz'
 import { detectKind, planGoal } from '../src/lib/goals'
 
 describe('quiz: vectores de content/test_vectors.json', () => {
@@ -49,8 +50,16 @@ describe('preguntas directas', () => {
     const base = { ...(vectors[0].answers as Answers) }
     const withDirect: Answers = { ...base, q21: 'c', q22: 'd', q23: 'd', q24: 'a' }
     expect(computeProfile(withDirect)).toEqual(computeProfile(base))
-    expect(directSuggestions(withDirect)).toEqual(['fumar_menos', 'max_2_tragos', 'redes_2h', 'celular_manana'])
+    expect(directSuggestions(withDirect)).toEqual(['max_2_tragos', 'redes_2h', 'celular_manana'])
+    expect(directVices(withDirect)).toEqual(['fumar'])
+    expect(directSuggestions({ ...base, q21: 'd' })).toEqual(['fumar_menos'])
+    expect(directVices({ ...base, q21: 'd' })).toEqual([])
     expect(directSuggestions(base)).toEqual([])
+  })
+
+  it('los vicios sugeridos existen en content/vices.json', () => {
+    const ids = vicesJson.vices.map((v) => v.id)
+    for (const q of QUESTIONS) for (const o of q.options) if (o.vice) expect(ids).toContain(o.vice)
   })
 
   it('los hábitos sugeridos existen y los de vicios no entran solos al paquete', () => {

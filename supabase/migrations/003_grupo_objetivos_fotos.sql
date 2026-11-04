@@ -536,7 +536,8 @@ language sql stable security definer set search_path = public as $$
       or exists (select 1 from habit_reviews where habit_id = p_habit and group_id = p_group and status = 'approved');
 $$;
 
-create or replace function public.group_leaderboard(p_group uuid)
+drop function if exists public.group_leaderboard(uuid);
+create function public.group_leaderboard(p_group uuid)
 returns table (
   user_id uuid, username text, display_name text, archetype text,
   total_points numeric, max_points numeric, pct numeric, streak int

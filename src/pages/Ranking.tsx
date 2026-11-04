@@ -11,6 +11,7 @@ import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Spinner } from '../co
 import GroupPicker from '../components/GroupPicker'
 import { MyRadar } from '../components/MyRadar'
 import LeagueTable from '../components/LeagueTable'
+import { fmtMult } from '../lib/vices'
 import { emblemUrl } from '../components/ArchetypeCard'
 
 const medal = ['🥇', '🥈', '🥉']
@@ -112,6 +113,7 @@ export default function Ranking() {
                     </span>
                     <span className="block truncate text-xs text-muted">{arch ? arch.name : `@${r.username}`}</span>
                   </span>
+                  {Number(r.multiplier) < 1 && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-xs font-bold text-danger" title="Multiplicador por vicios declarados">{fmtMult(Number(r.multiplier))}</span>}
                   <Flame n={r.streak} />
                   <span className="w-20 text-right">
                     <span className="block font-black tabular-nums text-xp">{Math.round(r.total_points)}</span>
@@ -130,7 +132,7 @@ export default function Ranking() {
         </ol>
       )}
       {tab === 'points' && <p className="mt-4 text-center text-xs text-muted">
-        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Los hábitos propios suman acá solo si este grupo los aprobó. Tocá a alguien para ver su radar.
+        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Los hábitos propios suman acá solo si este grupo los aprobó. Los vicios declarados multiplican los puntos (×0,9 cada uno) y los tropiezos restan del día. Tocá a alguien para ver su radar.
       </p>}
     </>
   )

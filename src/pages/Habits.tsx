@@ -7,6 +7,7 @@ import { reviewBadge, useMyReviews } from '../lib/reviews'
 import type { Habit } from '../lib/types'
 import CatalogPicker from '../components/CatalogPicker'
 import Goals from '../components/Goals'
+import Vices from '../components/Vices'
 import { AreaIcon, AreaTag, Empty, ErrorBox, Loading, PageHeader, Tier } from '../components/ui'
 
 interface Draft { name: string; criterion: string; area: string; tier: number; partial: boolean; target: number; unit: string }
@@ -80,21 +81,21 @@ function CustomHabitForm({ onSubmit, onCancel }: { onSubmit: (d: Draft) => Promi
 type Mode = null | 'catalog' | 'custom'
 
 export default function Habits() {
-  const [tab, setTab] = useState<'habits' | 'goals'>('habits')
+  const [tab, setTab] = useState<'habits' | 'goals' | 'vices'>('habits')
   return (
     <>
       <PageHeader title="Mis hábitos" subtitle="Tu grupo ve tus hábitos y lo que marcás (menos los privados)." />
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
-        {(['habits', 'goals'] as const).map((t) => (
+      <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-surface p-1" role="tablist">
+        {(['habits', 'goals', 'vices'] as const).map((t) => (
           <button
             key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={`min-h-10 rounded-lg text-sm font-semibold ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}
           >
-            {t === 'habits' ? 'Hábitos' : 'Objetivos'}
+            {t === 'habits' ? 'Hábitos' : t === 'goals' ? 'Objetivos' : 'Vicios'}
           </button>
         ))}
       </div>
-      {tab === 'habits' ? <HabitsList /> : <Goals />}
+      {tab === 'habits' ? <HabitsList /> : tab === 'goals' ? <Goals /> : <Vices />}
     </>
   )
 }

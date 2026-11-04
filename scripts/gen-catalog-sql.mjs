@@ -1,7 +1,8 @@
 // Regenera los bloques de datos de las migraciones a partir de content/:
 //   003: catálogo de hábitos (content/habits.json)
 //   004: preguntas del Juicio y configuración de la liga (content/judgment.json)
-// Uso: npm run catalog   (después, volver a ejecutar 003/004 en Supabase)
+//   005: vicios (content/vices.json)
+// Uso: npm run catalog   (después, volver a ejecutar en Supabase esa migración y las siguientes)
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const q = (v) =>
@@ -57,3 +58,14 @@ replaceBlock('supabase/migrations/004_liga_juicio_cofre.sql', 'JUDGMENT', [
   'on conflict (key) do update set value = excluded.value;',
 ].join('\n'))
 console.log(`✓ ${qs.length} preguntas y ${Object.keys(config).length} valores de configuración → 004`)
+
+// ── 005: vicios
+const vj = JSON.parse(readFileSync('content/vices.json', 'utf8'))
+replaceBlock('supabase/migrations/005_vicios.sql', 'VICES', [
+  'insert into public.vice_catalog (id, name, area, slip, slip_penalty) values',
+  vj.vices.map((v) => `  (${[v.id, v.name, v.area, v.slip, v.slip_penalty].map(q).join(', ')})`).join(',\n'),
+  'on conflict (id) do update set name = excluded.name, area = excluded.area, slip = excluded.slip, slip_penalty = excluded.slip_penalty;',
+  `insert into public.game_config (key, value) values ('vice_multiplier', '${JSON.stringify(vj.multiplier)}'::jsonb)`,
+  'on conflict (key) do update set value = excluded.value;',
+].join('\n'))
+console.log(`✓ ${vj.vices.length} vicios → 005`)

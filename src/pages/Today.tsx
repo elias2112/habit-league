@@ -10,6 +10,7 @@ import { reviewBadge, useMyReviews } from '../lib/reviews'
 import type { Habit } from '../lib/types'
 import EvidencePhoto from '../components/EvidencePhoto'
 import Judgment from '../components/Judgment'
+import { VICES, fmtMult, useTodayScore } from '../lib/vices'
 import LeagueBadge from '../components/LeagueBadge'
 import { signed, useLeague, type JudgmentToday } from '../lib/league'
 import { AreaIcon, Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Tier } from '../components/ui'
@@ -34,6 +35,7 @@ export default function Today() {
   const [error, setError] = useState<string | null>(null)
   const { byHabit, reload: reloadReviews } = useMyReviews()
   const league = useLeague()
+  const todayScore = useTodayScore()
   const [judgment, setJudgment] = useState<JudgmentToday | null>(null)
   const [judging, setJudging] = useState(false)
 
@@ -93,6 +95,13 @@ export default function Today() {
     setBusy((b) => { const n = new Set(b); n.delete(habitId); return n })
     if (error) setError(errorMessage(error))
     await load()
+    await todayScore.reload()
+  }
+
+  async function slip(viceId: string, on: boolean) {
+    const { error } = await supabase.rpc('log_slip', { p_vice: viceId, p_on: on })
+    setError(error ? errorMessage(error) : null)
+    await todayScore.reload()
   }
 
   const toggle = (h: Habit) => {
@@ -125,7 +134,13 @@ export default function Today() {
   if (loading) return <Loading />
 
   const tiers = habits.map((h) => h.tier)
-  const pointsToday = Math.round([...logs.values()].reduce((a, b) => a + b.points, 0))
+  const rawToday = [...logs.values()].reduce((a, b) => a + b.points, 0)
+  const sc = todayScore.score
+  // Puntos ajustados (× vicios − tropiezos) calculados por la base; mientras carga, los crudos.
+  const pointsToday = Math.round(sc ? sc.final : rawToday)
+  const adjusted = sc && (sc.multiplier < 1 || sc.slips > 0)
+  const declared = new Set((sc?.vices ?? []).map((v) => v.vice_id))
+  const slipped = new Set(sc?.slip_ids ?? [])
   const doneCount = habits.filter((h) => { const l = logs.get(h.id); return l && l.count >= l.target }).length
   const deviceTz = browserTimezone()
   const tzMismatch = profile && deviceTz && profile.timezone !== deviceTz
@@ -178,6 +193,13 @@ export default function Today() {
         <div className="mt-1 text-5xl font-black tabular-nums text-xp">
           {pointsToday}<span className="text-xl font-bold text-muted"> / 100</span>
         </div>
+        {adjusted && sc && (
+          <p className="mt-1 text-xs text-muted tabular-nums">
+            Hábitos {Math.round(sc.raw)}
+            {sc.multiplier < 1 && <> <b className="text-danger">{fmtMult(sc.multiplier)}</b> por {sc.vices.length === 1 ? 'tu vicio' : `tus ${sc.vices.length} vicios`}</>}
+            {sc.slips > 0 && <> <b className="text-danger">−{sc.slips}</b> de tropiezos</>}
+          </p>
+        )}
         <div className="mt-3"><Bar value={pointsToday} max={100} /></div>
         <p className="mt-3 text-sm text-muted">
           {streak > 0
@@ -224,6 +246,24 @@ export default function Today() {
           ))}
         </ul>
       )}
+      <details className="card mt-5" open={slipped.size > 0}>
+        <summary className="cursor-pointer font-semibold">
+          🫣 ¿Tropezaste hoy? {sc && sc.slips > 0 && <span className="ml-1 text-sm text-danger">−{sc.slips}</span>}
+        </summary>
+        <p className="mt-2 text-xs text-muted">Resta solo de hoy. Los vicios que declaraste ya te cuestan {sc ? fmtMult(sc.multiplier) : ''} y no aparecen acá. Es privado.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {VICES.filter((v) => !declared.has(v.id)).map((v) => {
+            const on = slipped.has(v.id)
+            return (
+              <button key={v.id} onClick={() => slip(v.id, !on)} aria-pressed={on}
+                className={`btn justify-between text-left text-sm ${on ? 'border border-danger/60 bg-danger/15 text-danger' : 'btn-ghost'}`}>
+                <span>{v.slip}</span><span className="tabular-nums">−{v.slip_penalty}</span>
+              </button>
+            )
+          })}
+        </div>
+      </details>
+
       <p className="mt-4 text-center text-xs text-muted">Sistema de honor: tu grupo ve lo que marcás (los privados, sin nombre ni foto).</p>
     </>
   )

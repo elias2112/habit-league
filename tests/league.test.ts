@@ -8,6 +8,7 @@ const FILES = [
   '../supabase/migrations/002_quiz_personas_puntos.sql',
   '../supabase/migrations/003_grupo_objetivos_fotos.sql',
   '../supabase/migrations/004_liga_juicio_cofre.sql',
+  '../supabase/migrations/005_vicios.sql',
 ]
 const STUB = `
 create role anon nologin;
