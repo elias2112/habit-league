@@ -27,6 +27,22 @@ Para probar en el móvil en la misma red: `npm run dev -- --host` y abre la IP q
 - **iPhone**: abrir la URL en Safari → Compartir → *Añadir a pantalla de inicio*.
 - **Android**: Chrome → menú → *Instalar aplicación* (la app también muestra un botón).
 
+## Administración
+
+### Alguien se olvidó la contraseña
+Nadie puede ver una contraseña (Supabase guarda solo un hash). Se pone una nueva desde **Supabase → SQL Editor**
+(cambiá el email y la clave temporal; la persona después la cambia en Perfil → Cambiar contraseña):
+
+```sql
+update auth.users
+set encrypted_password = extensions.crypt('ClaveTemporal123', extensions.gen_salt('bf')),
+    updated_at = now()
+where email = 'persona@ejemplo.com';
+```
+
+Debe devolver `UPDATE 1`. Si devuelve `UPDATE 0`, el email no coincide (mirá en Authentication → Users).
+Fuente del método: [discusión de Supabase #25977](https://github.com/orgs/supabase/discussions/25977).
+
 ## Comandos
 | | |
 |---|---|

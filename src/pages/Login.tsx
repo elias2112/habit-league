@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { appUrl, supabase } from '../lib/supabase'
 import { errorMessage } from '../lib/errors'
 import { ErrorBox } from '../components/ui'
+import { ADMIN_NAME } from '../lib/config'
 
 type Mode = 'login' | 'signup' | 'magic'
 
@@ -12,6 +13,8 @@ export default function Login() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [forgot, setForgot] = useState(false)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -72,11 +75,26 @@ export default function Login() {
         {mode !== 'magic' && (
           <div>
             <label className="label" htmlFor="password">Contraseña</label>
-            <input
-              id="password" className="input" type="password" required minLength={6}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              value={password} onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                id="password" className="input pr-12" type={showPassword ? 'text' : 'password'} required minLength={6}
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                value={password} onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 grid w-12 place-items-center text-muted"
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-pressed={showPassword}
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                  <circle cx="12" cy="12" r="3" />
+                  {showPassword && <path d="M3 3l18 18" />}
+                </svg>
+              </button>
+            </div>
           </div>
         )}
         <ErrorBox>{error}</ErrorBox>
@@ -85,6 +103,19 @@ export default function Login() {
           {mode === 'login' ? 'Entrar' : mode === 'signup' ? 'Crear cuenta' : 'Enviarme el enlace'}
         </button>
       </form>
+
+      {mode === 'login' && (
+        <div className="mt-4 text-center text-sm">
+          {forgot ? (
+            <p className="rounded-xl border border-line bg-surface px-3 py-2 text-muted">
+              Hablá con <b className="text-ink">{ADMIN_NAME}</b>: no puede ver tu contraseña (nadie puede, se guarda cifrada),
+              pero te pone una nueva para que entres y después la cambiás desde tu perfil.
+            </p>
+          ) : (
+            <button type="button" className="font-semibold text-primary" onClick={() => setForgot(true)}>¿Te olvidaste la contraseña?</button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

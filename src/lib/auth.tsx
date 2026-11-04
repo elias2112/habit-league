@@ -26,9 +26,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(async (s: Session | null) => {
     if (!s) { setProfile(null); setProfileError(null); return }
-    const { data, error } = await supabase.from('profiles').select(COLUMNS).eq('id', s.user.id).maybeSingle()
-    setProfileError(error ? error.message : null)
-    setProfile(data as Profile | null)
+    const read = () => supabase.from('profiles').select(COLUMNS).eq('id', s.user.id).maybeSingle()
+    try {
+      let { data, error } = await read()
+      // Cuenta sin perfil (creada antes de que existiera la base): se crea ahora.
+      if (!error && !data) {
+        const fix = await supabase.rpc('ensure_profile')
+        if (fix.error) throw fix.error
+        ;({ data, error } = await read())
+      }
+      if (error) throw error
+      if (!data) throw new Error('No se encontró tu perfil.')
+      setProfileError(null)
+      setProfile(data as Profile)
+    } catch (e) {
+      setProfile(null)
+      setProfileError((e as { message?: string }).message ?? String(e))
+    }
   }, [])
 
   useEffect(() => {

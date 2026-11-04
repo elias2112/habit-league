@@ -4,7 +4,45 @@
 -- Probado con tests automáticos (PGlite + stub de auth y storage): tests/sql.test.ts.
 -- El bloque del catálogo se genera desde content/habits.json con `npm run catalog`.
 
--- ───────────── 0. Arquetipos renombrados (content/archetypes.json v0.2) ─────────────
+-- ───────────── 0a. Perfiles faltantes ─────────────
+-- Cuentas creadas antes de ejecutar schema.sql no tienen perfil (el trigger no existía) y la app
+-- se quedaba cargando. Se crean acá y, por las dudas, la app llama a ensure_profile() al entrar.
+create or replace function public.make_username(p_email text, p_id uuid)
+returns text
+language sql immutable set search_path = public as $$
+  select coalesce(nullif(left(regexp_replace(coalesce(split_part(p_email, '@', 1), ''), '[^A-Za-z0-9_]', '', 'g'), 16), ''), 'user')
+         || '_' || substr(replace(p_id::text, '-', ''), 1, 6);
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, username) values (new.id, public.make_username(new.email, new.id))
+  on conflict (id) do nothing;
+  return new;
+end $$;
+
+insert into public.profiles (id, username)
+select u.id, public.make_username(u.email, u.id)
+from auth.users u
+where not exists (select 1 from public.profiles p where p.id = u.id)
+on conflict do nothing;
+
+create or replace function public.ensure_profile()
+returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'No autenticado'; end if;
+  insert into profiles (id, username)
+  select u.id, public.make_username(u.email, u.id) from auth.users u where u.id = auth.uid()
+  on conflict (id) do nothing;
+end $$;
+
+revoke execute on function public.ensure_profile(), public.make_username(text, uuid) from public, anon;
+grant execute on function public.ensure_profile() to authenticated;
+
+-- ───────────── 0b. Arquetipos renombrados (content/archetypes.json v0.2) ─────────────
 update public.profiles set archetype = case archetype
     when 'arquitecto' then 'estratega'
     when 'reiniciado' then 'fenix'

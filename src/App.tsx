@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
-import { isConfigured } from './lib/supabase'
+import { isConfigured, supabase } from './lib/supabase'
+import { ADMIN_NAME } from './lib/config'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
@@ -26,9 +27,17 @@ function Routed() {
   if (!session) return <Login />
   if (profileError) {
     return (
-      <Notice title="Falta actualizar la base de datos">
-        <p>No se pudo leer tu perfil. Lo más probable es que falte ejecutar <code className="text-primary">supabase/migrations/002_quiz_personas_puntos.sql</code> en el SQL Editor de Supabase.</p>
+      <Notice title="No se pudo cargar tu perfil">
+        <p>
+          Lo más probable es que falte ejecutar en Supabase (SQL Editor) alguna migración:{' '}
+          <code className="text-primary">002_quiz_personas_puntos.sql</code> o <code className="text-primary">003_grupo_objetivos_fotos.sql</code>.
+          Si no sos quien administra la app, avisale a {ADMIN_NAME}.
+        </p>
         <p className="text-xs">Detalle: {profileError}</p>
+        <div className="flex gap-2 pt-2">
+          <button className="btn btn-primary flex-1" onClick={() => window.location.reload()}>Reintentar</button>
+          <button className="btn btn-ghost flex-1" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
+        </div>
       </Notice>
     )
   }

@@ -111,6 +111,18 @@ describe('alta de usuario y perfil', () => {
     for (const r of await admin<{ username: string }>(`select username from profiles`)) expect(r.username).toMatch(/^[A-Za-z0-9_]{3,24}$/)
   })
 
+  it('cuenta sin perfil (creada antes del esquema): ensure_profile lo crea; re-ejecutar 003 también', async () => {
+    await admin(`delete from profiles where id = $1`, [A])
+    expect(await as(A, `select id from profiles where id = $1`, [A])).toHaveLength(0)
+    await as(A, `select ensure_profile()`)
+    await as(A, `select ensure_profile()`) // idempotente
+    expect(await as<{ username: string }>(A, `select username from profiles where id = $1`, [A])).toEqual([{ username: 'analopeztest_000000' }])
+
+    await admin(`delete from profiles where id = $1`, [B])
+    await db.exec(readFileSync(new URL(FILES[2], import.meta.url), 'utf8'))
+    expect(await admin(`select id from profiles where id = $1`, [B])).toHaveLength(1)
+  })
+
   it('rechaza zona horaria inválida y acepta una válida', async () => {
     await expect(as(A, `update profiles set timezone = 'Marte/Olympus' where id = $1`, [A])).rejects.toThrow(/Zona horaria inválida/)
     await as(A, `update profiles set timezone = 'America/Bogota' where id = $1`, [A])
