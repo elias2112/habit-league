@@ -1,5 +1,5 @@
 {
-  "version": "0.1",
+  "version": "0.2",
   "note": "Quiz propio, NO es un test psicométrico validado. Textos editables.",
   "axes": {
     "E": "Estructura: alto = necesita guía y reglas claras",
@@ -94,12 +94,12 @@
         },
         {
           "id": "b",
-          "text": "Sentirme más tranquilo y con la cabeza clara",
+          "text": "Sentirme más en calma y con la cabeza clara",
           "area": "mente"
         },
         {
           "id": "c",
-          "text": "Dormir bien y despertar descansado",
+          "text": "Dormir bien y despertar con energía",
           "area": "sueno"
         },
         {
@@ -437,7 +437,7 @@
       "id": "q14",
       "section": "momentum",
       "type": "single",
-      "text": "¿Cuándo fue la última vez que te sentiste orgulloso de tu constancia?",
+      "text": "¿Cuándo fue la última vez que sentiste orgullo por tu constancia?",
       "options": [
         {
           "id": "a",
@@ -493,26 +493,26 @@
       "id": "q16",
       "section": "momentum",
       "type": "single",
-      "text": "¿Qué tan seguro estás de sostener una rutina diaria durante 7 días seguidos?",
+      "text": "¿Qué confianza tenés en poder sostener una rutina diaria durante 7 días seguidos?",
       "options": [
         {
           "id": "a",
-          "text": "Nada seguro",
+          "text": "Ninguna confianza",
           "value": 0
         },
         {
           "id": "b",
-          "text": "Poco seguro",
+          "text": "Poca confianza",
           "value": 1
         },
         {
           "id": "c",
-          "text": "Bastante seguro",
+          "text": "Bastante confianza",
           "value": 2
         },
         {
           "id": "d",
-          "text": "Muy seguro",
+          "text": "Mucha confianza",
           "value": 3
         }
       ]
@@ -628,6 +628,138 @@
           "value": 3
         }
       ]
+    },
+    {
+      "id": "q21",
+      "section": "directas",
+      "type": "single",
+      "text": "¿Fumás o vapeás?",
+      "options": [
+        {
+          "id": "a",
+          "text": "No",
+          "suggest": []
+        },
+        {
+          "id": "b",
+          "text": "A veces, en salidas",
+          "suggest": [
+            "dia_sin_fumar"
+          ]
+        },
+        {
+          "id": "c",
+          "text": "Todos los días",
+          "suggest": [
+            "fumar_menos"
+          ]
+        },
+        {
+          "id": "d",
+          "text": "Todos los días y quiero dejar",
+          "suggest": [
+            "fumar_menos"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q22",
+      "section": "directas",
+      "type": "single",
+      "text": "¿Cuántos días por semana tomás alcohol?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nunca o casi nunca",
+          "suggest": []
+        },
+        {
+          "id": "b",
+          "text": "1 o 2 días",
+          "suggest": []
+        },
+        {
+          "id": "c",
+          "text": "3 o 4 días",
+          "suggest": [
+            "dia_sin_alcohol"
+          ]
+        },
+        {
+          "id": "d",
+          "text": "5 o más días",
+          "suggest": [
+            "max_2_tragos"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q23",
+      "section": "directas",
+      "type": "single",
+      "text": "¿Cuántas horas por día pasás en redes sociales?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Menos de 1 hora",
+          "suggest": []
+        },
+        {
+          "id": "b",
+          "text": "Entre 1 y 2 horas",
+          "suggest": []
+        },
+        {
+          "id": "c",
+          "text": "Entre 2 y 4 horas",
+          "suggest": [
+            "redes_2h"
+          ]
+        },
+        {
+          "id": "d",
+          "text": "Más de 4 horas",
+          "suggest": [
+            "redes_2h",
+            "celular_manana"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "q24",
+      "section": "directas",
+      "type": "single",
+      "text": "¿Cuántas veces por semana pedís delivery o comida rápida?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nunca",
+          "suggest": []
+        },
+        {
+          "id": "b",
+          "text": "1 o 2 veces",
+          "suggest": []
+        },
+        {
+          "id": "c",
+          "text": "3 o 4 veces",
+          "suggest": [
+            "sin_delivery"
+          ]
+        },
+        {
+          "id": "d",
+          "text": "5 o más veces",
+          "suggest": [
+            "sin_delivery"
+          ]
+        }
+      ]
     }
-  ]
+  ],
+  "direct_note": "Preguntas directas (q21-q24): no cambian arquetipo ni áreas; solo agregan sugerencias al paquete. Las respuestas son privadas (solo las ve quien responde)."
 }

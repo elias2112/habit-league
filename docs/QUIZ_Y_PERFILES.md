@@ -14,6 +14,24 @@
 5. **Paquete inicial de hábitos:** se eligen hasta 3 áreas (por prioridad; empate → menor nivel primero). Se reparten `start_habits` hábitos entre ellas por turnos. En cada área se prefieren los hábitos de mayor dificultad permitida, donde dificultad máxima = tier del nivel (0–1→1, 2→2, 3→3) + `tier_adjust` del arquetipo, limitado a 1–3.
 6. El usuario puede **quitar, cambiar o agregar** hábitos (mínimo 3 activos, ver Normalización).
 
+## Preguntas directas (q21–q24)
+
+Cuatro preguntas más directas (fumar o vapear, alcohol, redes, delivery). **No cambian el arquetipo ni las áreas**: cada opción trae una lista `suggest` de hábitos del catálogo que se agregan al paquete sugerido (la persona los puede quitar). Las respuestas son privadas. Los hábitos de fumar y alcohol se crean como privados por defecto (`private_default`).
+
+| Pregunta | Sugiere |
+|---|---|
+| ¿Fumás o vapeás? | A veces → Día sin fumar · A diario (o quiero dejar) → Fumar menos que ayer |
+| ¿Cuántos días por semana tomás alcohol? | 3–4 → Día sin alcohol · 5 o más → Máximo 2 tragos |
+| ¿Cuántas horas por día en redes? | 2–4 h → Menos de 2 h de redes · Más de 4 h → además, Sin celular la primera hora |
+| ¿Cuántas veces por semana delivery o comida rápida? | 3 o más → Día sin delivery |
+
+## Catálogo ampliado (v0.2)
+
+- `auto: false`: el hábito se ve en el catálogo pero **no entra en el paquete automático** del paso 5 (así los paquetes de los vectores de prueba no cambian y nadie recibe "Día sin fumar" sin haberlo pedido).
+- `target` / `unit`: se marca por partes (ej. 8 vasos de agua, 4 bloques de 25 min).
+- Nuevos: 10.000 pasos, Correr 5 km, Fumar menos que ayer, Día sin fumar, Menos de 2 h de redes, 20 minutos al aire libre, Acostarte a la misma hora, Celular fuera de la cama, Máximo 2 tragos, Día sin alcohol, Día sin delivery, 2 frutas, Sin celular la primera hora, 4 bloques de 25 minutos, Ayudar a alguien, Comer con alguien sin pantallas.
+- El catálogo también vive en la base (`catalog_habits`, migración 003), generado con `npm run catalog`: así nadie puede crear un hábito "de catálogo" con otra dificultad.
+
 ## Normalización del puntaje
 
 - Cada hábito tiene `tier` 1, 2 o 3 (esfuerzo).
@@ -35,8 +53,8 @@ _(multi, elegir 1–3)_
 
 **Q2** · _objetivos_ · ¿Qué resultado te importaría más dentro de 66 días?
 - Tener más energía y fuerza → cuerpo
-- Sentirme más tranquilo y con la cabeza clara → mente
-- Dormir bien y despertar descansado → sueno
+- Sentirme más en calma y con la cabeza clara → mente
+- Dormir bien y despertar con energía → sueno
 - Comer mejor sin complicarme → alimentacion
 - Avanzar en mi trabajo o estudios → foco
 - Estar más cerca de la gente que quiero → social
@@ -107,7 +125,7 @@ _(multi, elegir 1–3)_
 - 3 a 5 (2)
 - Casi todos (3)
 
-**Q14** · _momentum_ · ¿Cuándo fue la última vez que te sentiste orgulloso de tu constancia?
+**Q14** · _momentum_ · ¿Cuándo fue la última vez que sentiste orgullo por tu constancia?
 - Hace tanto que no me acuerdo (0)
 - Hace meses (1)
 - Hace unas semanas (2)
@@ -119,11 +137,11 @@ _(multi, elegir 1–3)_
 - Bastante predecibles (2)
 - Muy predecibles (3)
 
-**Q16** · _momentum_ · ¿Qué tan seguro estás de sostener una rutina diaria durante 7 días seguidos?
-- Nada seguro (0)
-- Poco seguro (1)
-- Bastante seguro (2)
-- Muy seguro (3)
+**Q16** · _momentum_ · ¿Qué confianza tenés en poder sostener una rutina diaria durante 7 días seguidos?
+- Ninguna confianza (0)
+- Poca confianza (1)
+- Bastante confianza (2)
+- Mucha confianza (3)
 
 **Q17** · _resiliencia_ · Si me salteo un día de mi rutina, normalmente…
 - La abandono (0)
@@ -153,51 +171,51 @@ _(multi, elegir 1–3)_
 
 | Código | Arquetipo | Hábitos iniciales | Ajuste dificultad |
 |---|---|---|---|
-| EMR | El Arquitecto | 5 | +0 |
-| EMr | El Perfeccionista | 4 | +0 |
-| EmR | El Aprendiz | 3 | +0 |
-| Emr | El Reiniciado | 3 | -1 |
-| eMR | El Explorador | 5 | +0 |
-| eMr | El Velocista | 4 | +0 |
-| emR | El Nómada | 3 | +0 |
-| emr | El Espíritu Libre | 3 | -1 |
+| EMR | Estratega | 5 | +0 |
+| EMr | Perfeccionista | 4 | +0 |
+| EmR | Aprendiz | 3 | +0 |
+| Emr | Fénix | 3 | -1 |
+| eMR | Autodidacta | 5 | +0 |
+| eMr | Velocista | 4 | +0 |
+| emR | Nómada | 3 | +0 |
+| emr | Espíritu Libre | 3 | -1 |
 
-### El Arquitecto — _Ya tenés el sistema; ahora lo afinás._
+### Estratega — _Ya tenés el sistema; ahora lo afinás._
 Valorás los planes claros, ya sostenés rutinas y te recuperás rápido cuando algo falla. Tu desafío es mantener el ritmo sin caer en la monotonía.
 - Fortalezas: Rutinas ya armadas, Retomás rápido
 - Ojo con: Aburrirte de lo mismo
 
-### El Perfeccionista — _Constante, pero un tropiezo te pesa._
+### Perfeccionista — _Constante, pero un tropiezo te pesa._
 Sostenés rutinas y te gustan los planes claros, pero un día fallado puede hacerte sentir que se arruinó todo. Un día perdido no es el fin del camino.
 - Fortalezas: Constancia, Orden
 - Ojo con: Tomar un día fallado como un fracaso total
 
-### El Aprendiz — _Necesitás guía y siempre volvés a levantarte._
+### Aprendiz — _Necesitás guía y siempre volvés a levantarte._
 Todavía no tenés un ritmo estable, pero buscás estructura y retomás cuando algo sale mal. Un plan paso a paso, con pocos hábitos, es lo tuyo.
-- Fortalezas: Retomás después de fallar, Abierto a la guía
+- Fortalezas: Retomás después de fallar, Apertura a la guía
 - Ojo con: Querer hacer demasiado de golpe
 
-### El Reiniciado — _Empezás de nuevo, y con apoyo._
+### Fénix — _Empezás de nuevo, y con apoyo._
 Necesitás estructura, tu constancia actual es baja y los tropiezos te cuestan. Lo mejor es arrancar con pocos hábitos fáciles y apoyarte en el grupo.
 - Fortalezas: Ganas de cambiar, Disposición a pedir apoyo
 - Ojo con: Abandonar tras los primeros tropiezos
 
-### El Explorador — _Te organizás solo y sostenés el ritmo._
-Sos autónomo, constante y flexible: ajustás sobre la marcha y seguís. Probá hábitos nuevos sin perder tu base.
+### Autodidacta — _Te organizás por tu cuenta y sostenés el ritmo._
+Te organizás con autonomía, sos constante y flexible: ajustás sobre la marcha y seguís. Probá hábitos nuevos sin perder tu base.
 - Fortalezas: Autonomía, Constancia, Flexibilidad
 - Ojo con: Dispersarte con demasiadas ideas
 
-### El Velocista — _Arrancás fuerte; el desafío es el largo plazo._
+### Velocista — _Arrancás fuerte; el desafío es el largo plazo._
 Tenés impulso y autonomía, pero cuando algo falla tendés a soltar. Los retos largos y el grupo te ayudan a no apagarte.
 - Fortalezas: Impulso, Autonomía
 - Ojo con: Soltar todo tras un mal tramo
 
-### El Nómada — _Libre y sin ritmo fijo, pero resiliente._
+### Nómada — _Libre y sin ritmo fijo, pero resiliente._
 Preferís tu propio camino y todavía no tenés un ritmo estable, pero te recuperás bien. Empezar liviano y flexible te funciona.
 - Fortalezas: Resiliencia, Independencia
 - Ojo con: Falta de rutina fija
 
-### El Espíritu Libre — _Las reglas no son lo tuyo; empezá liviano._
+### Espíritu Libre — _Las reglas no son lo tuyo; empezá liviano._
 No te gustan las reglas fijas y sostener cuesta. Lo mejor es empezar con pocos hábitos fáciles y que la competencia con amigos haga de motor.
 - Fortalezas: Creatividad, Independencia
 - Ojo con: Abandonar cuando se vuelve rutina

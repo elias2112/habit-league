@@ -1,0 +1,62 @@
+{
+  "version": "0.1",
+  "note": "Plantillas de objetivos. Sin IA (costo 0): se detecta el tipo por palabras clave y se calcula un hábito diario a partir de la meta y la fecha. Los valores por defecto son editables y no son recomendaciones validadas.",
+  "kinds": [
+    {
+      "id": "ahorro",
+      "name": "Ahorrar para algo",
+      "example": "Comprar un celular",
+      "keywords": ["comprar", "ahorrar", "ahorro", "plata", "dinero", "viaje", "viajar", "celular", "notebook", "auto", "moto", "bici", "consola", "regalo"],
+      "amount_label": "¿Cuánto necesitás juntar?",
+      "default_amount": 500,
+      "unit": "€",
+      "area": "foco",
+      "habit": "Ahorrar {daily} {unit}",
+      "criterion": "Separar {daily} {unit} para «{title}».",
+      "counter": false
+    },
+    {
+      "id": "lectura",
+      "name": "Leer",
+      "example": "Leer un libro por semana",
+      "keywords": ["leer", "lectura", "libro", "libros", "novela", "novelas"],
+      "amount_label": "¿Cuántos libros?",
+      "default_amount": 4,
+      "per_item": 250,
+      "per_item_label": "Páginas por libro (aprox.)",
+      "unit": "páginas",
+      "area": "mente",
+      "habit": "Leer {daily} páginas",
+      "criterion": "{daily} páginas para «{title}».",
+      "counter": true,
+      "tiers": [10, 30]
+    },
+    {
+      "id": "escritura",
+      "name": "Escribir",
+      "example": "Escribir un libro",
+      "keywords": ["escribir", "escritura", "redactar", "tesis", "blog", "guion"],
+      "amount_label": "¿Cuántas palabras en total?",
+      "default_amount": 50000,
+      "unit": "palabras",
+      "area": "foco",
+      "habit": "Escribir {daily} palabras",
+      "criterion": "{daily} palabras para «{title}».",
+      "counter": true,
+      "tiers": [300, 1000]
+    },
+    {
+      "id": "general",
+      "name": "Otro objetivo",
+      "example": "Aprender a tocar la guitarra",
+      "keywords": [],
+      "amount_label": "¿Cuántas sesiones de trabajo calculás?",
+      "default_amount": 30,
+      "unit": "sesiones",
+      "area": "foco",
+      "habit": "Avanzar en «{title}» 30 minutos",
+      "criterion": "30 minutos dedicados a «{title}».",
+      "counter": false
+    }
+  ]
+}

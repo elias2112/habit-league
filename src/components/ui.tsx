@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { areaName, areaStyle } from '../lib/areas'
+import { TIER_LABEL } from '../lib/quiz'
 
 export function Spinner({ className = '' }: { className?: string }) {
   return (
@@ -69,10 +70,11 @@ export function AreaTag({ area }: { area: string | null | undefined }) {
 }
 
 export function Tier({ tier }: { tier: number }) {
-  const label = tier === 1 ? 'Fácil' : tier === 2 ? 'Media' : 'Difícil'
+  const label = TIER_LABEL[tier] ?? 'Difícil'
+  const steps = tier > 3 ? [1, 2, 3, 4] : [1, 2, 3]
   return (
     <span className="inline-flex items-center gap-0.5 text-xs text-muted" title={`Dificultad: ${label}`}>
-      {[1, 2, 3].map((i) => (
+      {steps.map((i) => (
         <span key={i} className={`h-1.5 w-3 rounded-full ${i <= tier ? 'bg-xp' : 'bg-line'}`} />
       ))}
       <span className="ml-1">{label}</span>

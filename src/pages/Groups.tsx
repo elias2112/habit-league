@@ -5,8 +5,10 @@ import { useGroups } from '../lib/groups'
 import { errorMessage } from '../lib/errors'
 import { timeAgo } from '../lib/date'
 import { areaStyle } from '../lib/areas'
-import type { FeedRow } from '../lib/types'
-import { ErrorBox, PageHeader, Spinner } from '../components/ui'
+import type { FeedRow, GroupReview } from '../lib/types'
+import { TIER_LABEL } from '../lib/quiz'
+import EvidencePhoto from '../components/EvidencePhoto'
+import { AreaIcon, ErrorBox, PageHeader, Spinner, Tier } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 
 function Feed({ groupId, me }: { groupId: string; me: string }) {
@@ -30,18 +32,111 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
   if (rows.length === 0) return <p className="text-sm text-muted">Todavía no hay actividad.</p>
   return (
     <ul className="divide-y divide-line">
-      {rows.map((r) => (
-        <li key={r.log_id} className="flex items-center gap-3 py-2.5 text-sm">
-          <span className="text-lg" aria-hidden>{areaStyle(r.habit_area).icon}</span>
-          <span className="min-w-0 flex-1">
-            <b className={r.user_id === me ? 'text-primary' : ''}>{r.user_id === me ? 'Tú' : r.username}</b>{' '}
-            <span className="text-ink">· {r.habit_name}</span>
-          </span>
-          <span className="font-bold text-xp">+{Math.round(Number(r.points))}</span>
-          <span className="w-20 text-right text-xs text-muted">{timeAgo(r.created_at)}</span>
-        </li>
-      ))}
+      {rows.map((r) => {
+        const partial = r.target > 1 && r.count < r.target
+        return (
+          <li key={r.log_id} className="flex items-center gap-3 py-2.5 text-sm">
+            <span className="text-lg" aria-hidden>{r.is_private && r.user_id !== me ? '🔒' : areaStyle(r.habit_area).icon}</span>
+            <span className="min-w-0 flex-1">
+              <b className={r.user_id === me ? 'text-primary' : ''}>{r.user_id === me ? 'Vos' : r.username}</b>{' '}
+              <span className="text-ink">· {r.habit_name}</span>
+              {r.target > 1 && (
+                <span className={`block text-xs ${partial ? 'text-muted' : 'text-primary'}`}>
+                  {r.count.toLocaleString('es-ES')}/{r.target.toLocaleString('es-ES')} {r.unit}
+                </span>
+              )}
+            </span>
+            {r.photo_path && <EvidencePhoto path={r.photo_path} className="h-10 w-10" />}
+            <span className="font-bold text-xp">+{Math.round(Number(r.points))}</span>
+            <span className="w-16 text-right text-xs text-muted">{timeAgo(r.created_at)}</span>
+          </li>
+        )
+      })}
     </ul>
+  )
+}
+
+/** Hábitos propios de otros que esperan tu voto (≥ 50 % del resto del grupo aprueba). */
+function Reviews({ groupId, me }: { groupId: string; me: string }) {
+  const [rows, setRows] = useState<GroupReview[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.rpc('group_reviews', { p_group: groupId })
+    if (error) setError(errorMessage(error))
+    setRows((data as GroupReview[]) ?? [])
+  }, [groupId])
+  useEffect(() => { void load() }, [load])
+
+  async function vote(r: GroupReview, approve: boolean) {
+    setBusy(r.habit_id); setError(null)
+    const { error } = await supabase.rpc('vote_habit', { p_habit: r.habit_id, p_group: groupId, p_approve: approve })
+    setBusy(null)
+    if (error) setError(errorMessage(error))
+    await load()
+  }
+
+  if (!rows || rows.length === 0) return null
+  const pending = rows.filter((r) => r.status === 'pending')
+  const recent = rows.filter((r) => r.status !== 'pending')
+
+  return (
+    <section className="card mb-4">
+      <h2 className="mb-1 font-semibold">
+        Hábitos propuestos {pending.length > 0 && <span className="ml-1 rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-bg">{pending.length}</span>}
+      </h2>
+      <p className="mb-3 text-xs text-muted">Se aprueban con al menos la mitad del resto del grupo. Si se aprueban, suman también los días ya marcados.</p>
+      <ErrorBox>{error}</ErrorBox>
+      <ul className="space-y-3">
+        {pending.map((r) => {
+          const mine = r.owner_id === me
+          const need = Math.ceil(r.others / 2)
+          return (
+            <li key={r.habit_id} className="rounded-2xl border border-line bg-surface-2/50 p-3">
+              <div className="flex items-start gap-3">
+                <AreaIcon area={r.area} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">{r.habit_name}</p>
+                  {r.criterion && <p className="text-xs text-muted">{r.criterion}</p>}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
+                    <span>de <b className="text-ink">{mine ? 'vos' : r.owner_username}</b></span>
+                    <Tier tier={r.tier} />
+                    {r.target > 1 && <span>meta {r.target} {r.unit}</span>}
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    👍 {r.yes} · 👎 {r.no} · hacen falta {need} {need === 1 ? 'voto' : 'votos'} a favor de {r.others}
+                  </p>
+                </div>
+              </div>
+              {!mine && (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <button className={`btn ${r.my_vote === true ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.habit_id} onClick={() => vote(r, true)}>
+                    👍 Aprobar
+                  </button>
+                  <button className={`btn ${r.my_vote === false ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.habit_id} onClick={() => vote(r, false)}>
+                    👎 Rechazar
+                  </button>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+      {recent.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-semibold text-muted">Decididos esta semana ({recent.length})</summary>
+          <ul className="mt-2 space-y-1 text-sm">
+            {recent.map((r) => (
+              <li key={r.habit_id} className="flex justify-between gap-2">
+                <span className="truncate">{r.habit_name} <span className="text-muted">· {r.owner_id === me ? 'vos' : r.owner_username} · {TIER_LABEL[r.tier]}</span></span>
+                <span className={r.status === 'approved' ? 'text-alimentacion' : 'text-danger'}>{r.status === 'approved' ? 'Aprobado' : 'Rechazado'}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   )
 }
 
@@ -124,6 +219,8 @@ export default function Groups() {
               <button className="btn btn-primary shrink-0" onClick={share}>{copied ? '¡Copiado!' : 'Invitar'}</button>
             </div>
           </section>
+
+          <Reviews groupId={selected.id} me={me} />
 
           <section className="card mb-4">
             <h2 className="mb-2 font-semibold">Actividad del grupo</h2>

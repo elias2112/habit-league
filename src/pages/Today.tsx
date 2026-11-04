@@ -1,23 +1,35 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import { browserTimezone, formatLongDate } from '../lib/date'
 import { MIN_ACTIVE_HABITS, archetypeById, catalogById, pointsFor } from '../lib/quiz'
+import { uploadEvidence } from '../lib/photos'
+import { reviewBadge, useMyReviews } from '../lib/reviews'
 import type { Habit } from '../lib/types'
+import EvidencePhoto from '../components/EvidencePhoto'
 import { AreaIcon, Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Tier } from '../components/ui'
+
+interface Log { habit_id: string; points: number; count: number; target: number; photo_path: string | null }
+
+const CheckIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M5 13l4 4L19 7" />
+  </svg>
+)
 
 export default function Today() {
   const { session, profile } = useAuth()
   const me = session!.user.id
   const [today, setToday] = useState<string | null>(null)
   const [habits, setHabits] = useState<Habit[]>([])
-  const [logs, setLogs] = useState<Map<string, number>>(new Map()) // habit_id → puntos
+  const [logs, setLogs] = useState<Map<string, Log>>(new Map())
   const [streak, setStreak] = useState(0)
-  const [pending, setPending] = useState<Set<string>>(new Set())
+  const [busy, setBusy] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { byHabit, reload: reloadReviews } = useMyReviews()
 
   const load = useCallback(async () => {
     try {
@@ -27,7 +39,7 @@ export default function Today() {
       const day = d as string
       const [h, l, s] = await Promise.all([
         supabase.from('habits').select('*').eq('user_id', me).eq('archived', false).order('created_at'),
-        supabase.from('habit_logs').select('habit_id, points').eq('user_id', me).eq('log_date', day),
+        supabase.from('habit_logs').select('habit_id, points, count, target, photo_path').eq('user_id', me).eq('log_date', day),
         supabase.rpc('user_streak', { p_user: me }),
       ])
       if (h.error) throw h.error
@@ -35,7 +47,7 @@ export default function Today() {
       if (s.error) throw s.error
       setToday(day)
       setHabits(h.data as Habit[])
-      setLogs(new Map((l.data as { habit_id: string; points: number }[]).map((r) => [r.habit_id, Number(r.points)])))
+      setLogs(new Map((l.data as Log[]).map((r) => [r.habit_id, { ...r, points: Number(r.points) }])))
       setStreak((s.data as number) ?? 0)
       setError(null)
     } catch (err) {
@@ -48,34 +60,52 @@ export default function Today() {
   useEffect(() => {
     void load()
     // Al volver a la app (p. ej. al día siguiente) se recarga, por si cambió el día.
-    const onVisible = () => { if (document.visibilityState === 'visible') void load() }
+    const onVisible = () => { if (document.visibilityState === 'visible') { void load(); void reloadReviews() } }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [load])
+  }, [load, reloadReviews])
 
-  const tiers = habits.map((h) => h.tier)
-
-  async function toggle(h: Habit) {
-    if (pending.has(h.id)) return
-    const willBeDone = !logs.has(h.id)
-    setPending((p) => new Set(p).add(h.id))
-    // Optimista; los puntos reales los calcula la base y se recargan después.
-    setLogs((cur) => {
-      const n = new Map(cur)
-      if (willBeDone) n.set(h.id, pointsFor(h.tier, tiers))
-      else n.delete(h.id)
-      return n
-    })
-    const { error } = await supabase.rpc('set_habit_done', { p_habit: h.id, p_done: willBeDone })
-    setPending((p) => { const n = new Set(p); n.delete(h.id); return n })
+  async function run(habitId: string, fn: () => PromiseLike<{ error: unknown }>) {
+    if (busy.has(habitId)) return
+    setBusy((b) => new Set(b).add(habitId))
+    const { error } = await fn()
+    setBusy((b) => { const n = new Set(b); n.delete(habitId); return n })
     if (error) setError(errorMessage(error))
     await load()
   }
 
+  const toggle = (h: Habit) => {
+    const log = logs.get(h.id)
+    const complete = !!log && log.count >= log.target
+    // Optimista: el check se ve al instante; los puntos reales los calcula la base.
+    setLogs((cur) => {
+      const n = new Map(cur)
+      if (complete) n.delete(h.id)
+      else n.set(h.id, { habit_id: h.id, points: 0, count: h.target, target: h.target, photo_path: log?.photo_path ?? null })
+      return n
+    })
+    return run(h.id, () => supabase.rpc('set_habit_done', { p_habit: h.id, p_done: !complete }))
+  }
+  const add = (h: Habit, delta: number) => run(h.id, () => supabase.rpc('add_habit_progress', { p_habit: h.id, p_delta: delta }))
+
+  async function photo(h: Habit, file: File) {
+    setBusy((b) => new Set(b).add(h.id))
+    try {
+      await uploadEvidence(me, h.id, file, logs.get(h.id)?.photo_path)
+      setError(null)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setBusy((b) => { const n = new Set(b); n.delete(h.id); return n })
+      await load()
+    }
+  }
+
   if (loading) return <Loading />
 
-  const pointsToday = Math.round([...logs.values()].reduce((a, b) => a + b, 0))
-  const doneCount = habits.filter((h) => logs.has(h.id)).length
+  const tiers = habits.map((h) => h.tier)
+  const pointsToday = Math.round([...logs.values()].reduce((a, b) => a + b.points, 0))
+  const doneCount = habits.filter((h) => { const l = logs.get(h.id); return l && l.count >= l.target }).length
   const deviceTz = browserTimezone()
   const tzMismatch = profile && deviceTz && profile.timezone !== deviceTz
   const arch = archetypeById(profile?.archetype)
@@ -98,7 +128,7 @@ export default function Today() {
       <section className="card mb-5">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-semibold text-muted">Puntos de hoy</span>
-          <span className="text-sm text-muted">{doneCount}/{habits.length} hábitos</span>
+          <span className="text-sm text-muted">{doneCount}/{habits.length} completos</span>
         </div>
         <div className="mt-1 text-5xl font-black tabular-nums text-xp">
           {pointsToday}<span className="text-xl font-bold text-muted"> / 100</span>
@@ -108,10 +138,15 @@ export default function Today() {
           {streak > 0
             ? doneCount > 0
               ? `Racha de ${streak} ${streak === 1 ? 'día' : 'días'}. ¡Hoy ya cuenta!`
-              : `Racha de ${streak} ${streak === 1 ? 'día' : 'días'}. Marcá al menos un hábito hoy para no perderla.`
-            : 'Marcá al menos un hábito para empezar tu racha.'}
+              : `Racha de ${streak} ${streak === 1 ? 'día' : 'días'}. Completá al menos un hábito hoy para no perderla.`
+            : 'Completá al menos un hábito para empezar tu racha.'}
         </p>
-        {arch && <p className="mt-2 text-xs text-muted">{arch.name} · {arch.tagline}</p>}
+        {arch && (
+          <Link to="/perfil" className="mt-3 flex items-center gap-2 text-xs text-muted">
+            <img src={`${import.meta.env.BASE_URL}arquetipos/${arch.id}.svg`} alt="" className="h-6 w-6" />
+            {arch.name} · {arch.tagline}
+          </Link>
+        )}
       </section>
 
       <ErrorBox>{error}</ErrorBox>
@@ -124,49 +159,124 @@ export default function Today() {
 
       {habits.length === 0 ? (
         <Empty>
-          Aún no tenés hábitos.{' '}
+          Todavía no tenés hábitos.{' '}
           <Link to="/habitos" className="font-semibold text-primary">Agregá del catálogo</Link>
         </Empty>
       ) : (
         <ul className="space-y-2.5">
-          {habits.map((h) => {
-            const done = logs.has(h.id)
-            const criterion = catalogById(h.catalog_id)?.criterion
-            const value = done ? Math.round(logs.get(h.id)!) : Math.round(pointsFor(h.tier, tiers))
-            return (
-              <li key={h.id}>
-                <button
-                  onClick={() => toggle(h)}
-                  aria-pressed={done}
-                  className={`flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition active:scale-[.99] ${
-                    done ? 'border-primary/70 bg-primary/10' : 'border-line bg-surface'
-                  }`}
-                >
-                  <AreaIcon area={h.area} />
-                  <span className="min-w-0 flex-1">
-                    <span className={`block font-semibold ${done ? 'text-ink' : ''}`}>{h.name}</span>
-                    {criterion && <span className="block text-xs text-muted">{criterion}</span>}
-                    <span className="mt-1 flex items-center gap-3">
-                      <Tier tier={h.tier} />
-                      <span className="text-xs font-bold text-xp">+{value} pts</span>
-                    </span>
-                  </span>
-                  <span
-                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 transition ${
-                      done ? 'border-primary bg-primary text-bg' : 'border-line text-transparent'
-                    }`}
-                  >
-                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  </span>
-                </button>
-              </li>
-            )
-          })}
+          {habits.map((h) => (
+            <HabitRow
+              key={h.id}
+              h={h}
+              log={logs.get(h.id)}
+              value={Math.round(pointsFor(h.tier, tiers))}
+              busy={busy.has(h.id)}
+              badge={h.catalog_id ? null : reviewBadge(byHabit.get(h.id))}
+              onToggle={() => toggle(h)}
+              onAdd={(d) => add(h, d)}
+              onPhoto={(f) => photo(h, f)}
+            />
+          ))}
         </ul>
       )}
-      <p className="mt-4 text-center text-xs text-muted">Sistema de honor: tu grupo ve lo que marcás.</p>
+      <p className="mt-4 text-center text-xs text-muted">Sistema de honor: tu grupo ve lo que marcás (los privados, sin nombre ni foto).</p>
     </>
+  )
+}
+
+function HabitRow({ h, log, value, busy, badge, onToggle, onAdd, onPhoto }: {
+  h: Habit
+  log?: Log
+  value: number
+  busy: boolean
+  badge: ReturnType<typeof reviewBadge>
+  onToggle: () => void
+  onAdd: (delta: number) => void
+  onPhoto: (f: File) => void
+}) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [amount, setAmount] = useState('')
+  const count = log?.count ?? 0
+  const complete = count >= h.target
+  const partial = h.target > 1
+  const big = h.target > 12
+  const criterion = h.criterion ?? catalogById(h.catalog_id)?.criterion
+  const earned = log ? Math.round(log.points) : 0
+
+  return (
+    <li className={`rounded-2xl border p-3.5 transition ${complete ? 'border-primary/70 bg-primary/10' : 'border-line bg-surface'}`}>
+      <div className="flex items-start gap-3">
+        <AreaIcon area={h.area} />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">
+            {h.name} {h.private && <span className="text-xs text-muted" title="Privado: el grupo no ve el nombre ni la foto">🔒</span>}
+          </p>
+          {criterion && <p className="text-xs text-muted">{criterion}</p>}
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <Tier tier={h.tier} />
+            <span className="text-xs font-bold text-xp">{log ? `+${earned}` : `+${value}`} pts</span>
+            {partial && <span className="text-xs font-semibold text-ink tabular-nums">{count.toLocaleString('es-ES')}/{h.target.toLocaleString('es-ES')} {h.unit}</span>}
+          </p>
+          {badge && (
+            <p className={`mt-1 text-xs font-semibold ${badge.tone === 'pending' ? 'text-xp' : 'text-danger'}`}>
+              {badge.tone === 'pending' ? '⏳' : '✕'} {badge.text}
+            </p>
+          )}
+        </div>
+        {!partial && (
+          <button
+            onClick={onToggle}
+            disabled={busy}
+            aria-pressed={complete}
+            aria-label={complete ? `Desmarcar ${h.name}` : `Marcar ${h.name}`}
+            className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 transition active:scale-95 ${
+              complete ? 'border-primary bg-primary text-bg' : 'border-line text-transparent hover:text-muted'
+            }`}
+          >
+            <CheckIcon />
+          </button>
+        )}
+      </div>
+
+      {partial && (
+        <div className="mt-3">
+          <div className="mb-2"><Bar value={Math.min(count, h.target)} max={h.target} className="bg-primary" /></div>
+          {big ? (
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => { e.preventDefault(); const n = parseInt(amount, 10); if (n) { onAdd(n); setAmount('') } }}
+            >
+              <input
+                className="input min-w-0 flex-1" inputMode="numeric" pattern="-?[0-9]*" placeholder={`¿Cuántas ${h.unit ?? ''}?`}
+                value={amount} onChange={(e) => setAmount(e.target.value)} aria-label={`Cantidad de ${h.unit ?? ''}`}
+              />
+              <button className="btn btn-primary" disabled={busy || !parseInt(amount, 10)}>Sumar</button>
+              {!complete && <button type="button" className="btn btn-ghost" disabled={busy} onClick={onToggle}>Listo</button>}
+            </form>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button className="btn btn-ghost w-12 text-xl" disabled={busy || count === 0} onClick={() => onAdd(-1)} aria-label="Restar uno">−</button>
+              <button className="btn btn-primary flex-1" disabled={busy} onClick={() => onAdd(1)}>
+                +1 {h.unit ? h.unit.replace(/s$/, '') : ''}
+              </button>
+              {complete && <button className="btn btn-ghost" disabled={busy} onClick={onToggle}>Reiniciar</button>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {log && (
+        <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
+          {log.photo_path && <EvidencePhoto path={log.photo_path} className="h-12 w-12" />}
+          <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" disabled={busy} onClick={() => fileRef.current?.click()}>
+            📷 {log.photo_path ? 'Cambiar foto' : 'Subir foto'}
+          </button>
+          <input
+            ref={fileRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onPhoto(f) }}
+          />
+        </div>
+      )}
+    </li>
   )
 }

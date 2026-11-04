@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Emblema perfeccionista">
+  <defs><radialGradient id="g_perfeccionista" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#5AA9FF" stop-opacity=".22"/><stop offset="1" stop-color="#171B22"/></radialGradient></defs>
+  <polygon points="128.0,16.0 225.0,72.0 225.0,184.0 128.0,240.0 31.0,184.0 31.0,72.0" fill="url(#g_perfeccionista)" stroke="#5AA9FF" stroke-width="4" stroke-linejoin="round"/>
+  <polygon points="128.0,28.0 214.6,78.0 214.6,178.0 128.0,228.0 41.4,178.0 41.4,78.0" fill="none" stroke="#5AA9FF" stroke-opacity=".35" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="128" cy="128" r="46" fill="none" stroke="#5AA9FF" stroke-width="6" stroke-linecap="round" stroke-dasharray="250 40" transform="rotate(-60 128 128)"/><circle cx="128" cy="128" r="28" fill="none" stroke="#5AA9FF" stroke-width="6" stroke-linecap="round" stroke-dasharray="150 26" transform="rotate(60 128 128)" opacity=".7"/><circle cx="128" cy="128" r="7" fill="#5AA9FF"/>
+</svg>

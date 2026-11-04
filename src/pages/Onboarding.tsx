@@ -4,10 +4,11 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import {
-  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, isAnswered, pointsFor,
+  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, directSuggestions, isAnswered, pointsFor,
   type Answers, type QuizResult,
 } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
+import Radar, { levelsToRadar } from '../components/Radar'
 import CatalogPicker from '../components/CatalogPicker'
 import { AreaIcon, ErrorBox, Tier } from '../components/ui'
 
@@ -81,7 +82,7 @@ export default function Onboarding() {
     if (index < QUESTIONS.length - 1) { setIndex(index + 1); return }
     const r = computeProfile(a)
     setResult(r)
-    setPack(new Set(r.habits))
+    setPack(new Set([...r.habits, ...directSuggestions(a)]))
     setStep('result')
   }
 
@@ -100,7 +101,7 @@ export default function Onboarding() {
     try {
       const toInsert = [...pack].filter((id) => !existing.has(id)).map((id) => {
         const h = catalogById(id)!
-        return { user_id: me, name: h.name, tier: h.tier, area: h.area, catalog_id: h.id }
+        return { user_id: me, name: h.name, catalog_id: h.id, private: Boolean(h.private_default) }
       })
       if (toInsert.length) {
         const { error } = await supabase.from('habits').insert(toInsert)
@@ -143,7 +144,7 @@ export default function Onboarding() {
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="mx-auto h-20 w-20" />
           <h1 className="mt-6 text-3xl font-black tracking-tight">Armemos tu plan</h1>
           <p className="mt-3 text-muted">
-            Son {QUESTIONS.length} preguntas cortas. Con tus respuestas te asignamos un arquetipo y un paquete de hábitos para arrancar, que después podés cambiar.
+            Son {QUESTIONS.length} preguntas cortas. Con tus respuestas te asignamos un arquetipo y un paquete de hábitos para arrancar, que después podés cambiar. Las últimas 4 son más directas (fumar, alcohol, redes, delivery) y sus respuestas son privadas.
           </p>
           <p className="mt-6 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-muted">
             Es un juego para elegir un punto de partida, no un test psicológico ni un diagnóstico.
@@ -176,6 +177,7 @@ export default function Onboarding() {
         </div>
         <h1 className="text-2xl font-bold leading-snug">{q.text}</h1>
         {q.type === 'multi' && <p className="mt-1 text-sm text-muted">Elegí entre {q.min ?? 1} y {q.max}.</p>}
+        {q.section === 'directas' && <p className="mt-2 inline-block rounded-lg bg-surface-2 px-2 py-1 text-xs text-muted">🔒 Esta respuesta es privada: nadie del grupo la ve.</p>}
         <ul className="mt-6 space-y-2.5">
           {q.options.map((o) => {
             const on = selected.has(o.id)
@@ -206,7 +208,13 @@ export default function Onboarding() {
     return (
       <Shell footer={<button className="btn btn-primary w-full" onClick={() => setStep('pack')}>Ver mis hábitos sugeridos</button>}>
         {BackBtn}
-        <ArchetypeCard a={arch} />
+        <ArchetypeCard a={arch}>
+          <div className="mt-5 border-t border-line pt-4">
+            <p className="mb-1 text-sm font-semibold">Tus 6 áreas hoy (Día 1)</p>
+            <Radar day1={levelsToRadar(result.level)} size={280} />
+            <p className="text-center text-xs text-muted">Sale de tus respuestas sobre cada área. En tu perfil vas a ver cómo cambia con tus hábitos.</p>
+          </div>
+        </ArchetypeCard>
         <p className="mt-3 text-center text-xs text-muted">Es un juego para elegir un punto de partida, no un diagnóstico.</p>
       </Shell>
     )

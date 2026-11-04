@@ -24,8 +24,37 @@ export interface Habit {
   tier: number
   area: string | null
   catalog_id: string | null
+  target: number
+  unit: string | null
+  private: boolean
+  goal_id: string | null
+  goal_step: number
+  criterion: string | null
   archived: boolean
   created_at: string
+}
+
+export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+
+export interface MyReview { habit_id: string; group_id: string; group_name: string; status: ReviewStatus }
+
+export interface GroupReview {
+  habit_id: string
+  owner_id: string
+  owner_username: string
+  habit_name: string
+  criterion: string | null
+  area: string | null
+  tier: number
+  target: number
+  unit: string | null
+  status: ReviewStatus
+  yes: number
+  no: number
+  others: number
+  my_vote: boolean | null
+  created_at: string
+  decided_at: string | null
 }
 
 export interface LeaderboardRow {
@@ -46,6 +75,23 @@ export interface FeedRow {
   habit_name: string
   habit_area: string | null
   points: number
+  count: number
+  target: number
+  unit: string | null
+  photo_path: string | null
+  is_private: boolean
   log_date: string
   created_at: string
+}
+
+export interface Goal {
+  id: string
+  title: string
+  kind: 'ahorro' | 'lectura' | 'escritura' | 'general'
+  target: number
+  unit: string
+  deadline: string | null
+  archived: boolean
+  created_at: string
+  progress: number
 }

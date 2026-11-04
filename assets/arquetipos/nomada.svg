@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Emblema nomada">
+  <defs><radialGradient id="g_nomada" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#FF8FD0" stop-opacity=".22"/><stop offset="1" stop-color="#171B22"/></radialGradient></defs>
+  <polygon points="128.0,16.0 225.0,72.0 225.0,184.0 128.0,240.0 31.0,184.0 31.0,72.0" fill="url(#g_nomada)" stroke="#FF8FD0" stroke-width="4" stroke-linejoin="round"/>
+  <polygon points="128.0,28.0 214.6,78.0 214.6,178.0 128.0,228.0 41.4,178.0 41.4,78.0" fill="none" stroke="#FF8FD0" stroke-opacity=".35" stroke-width="2" stroke-linejoin="round"/>
+  <g fill="none" stroke="#FF8FD0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><polyline points="72,170 108,112 130,146 150,120 184,170"/><line x1="72" y1="170" x2="184" y2="170"/></g><circle cx="168" cy="92" r="11" fill="#FF8FD0"/>
+</svg>

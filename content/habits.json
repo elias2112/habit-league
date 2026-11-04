@@ -1,6 +1,6 @@
 {
-  "version": "0.1",
-  "note": "tier 1/2/3 = esfuerzo; los puntos salen de 100*tier/suma(tiers activos). Los criterios son autodeclarados. Sin afirmaciones de salud.",
+  "version": "0.2",
+  "note": "tier 1/2/3 = esfuerzo (4 = Muy difícil, solo hábitos propios); los puntos salen de 100*tier/suma(tiers activos). target/unit = se marca por partes (ej. 8 vasos). auto: false = no entra en el paquete automático del quiz (se ve en el catálogo; los de vicios los sugieren las preguntas directas). private_default = se crea como privado (el grupo ve \"Hábito privado\"). Criterios autodeclarados. Sin afirmaciones de salud.",
   "habits": [
     {
       "id": "caminar_30",
@@ -90,21 +90,25 @@
       "id": "agua_2l",
       "area": "alimentacion",
       "name": "Tomar 2 litros de agua",
-      "criterion": "Llegar a unos 2 litros de agua en el día.",
-      "tier": 1
+      "criterion": "Unos 2 litros en el día: 8 vasos de 250 ml.",
+      "tier": 1,
+      "target": 8,
+      "unit": "vasos"
     },
     {
       "id": "verdura_2",
       "area": "alimentacion",
       "name": "Verdura en 2 comidas",
       "criterion": "Verdura en al menos 2 comidas del día.",
-      "tier": 1
+      "tier": 1,
+      "target": 2,
+      "unit": "comidas"
     },
     {
       "id": "cocinar_casa",
       "area": "alimentacion",
       "name": "Cocinar una comida en casa",
-      "criterion": "Preparar al menos una comida vos mismo.",
+      "criterion": "Preparar con tus manos al menos una comida del día.",
       "tier": 2
     },
     {
@@ -169,6 +173,142 @@
       "name": "Pasar tiempo en persona con alguien",
       "criterion": "Compartir un rato en persona con alguien que te importa.",
       "tier": 3
+    },
+    {
+      "id": "pasos_10k",
+      "area": "cuerpo",
+      "name": "10.000 pasos",
+      "criterion": "Llegar a 10.000 pasos en el día (podés mirar el contador del teléfono).",
+      "tier": 2,
+      "auto": false
+    },
+    {
+      "id": "correr_5k",
+      "area": "cuerpo",
+      "name": "Correr 5 km",
+      "criterion": "Correr al menos 5 km, de una o en tramos.",
+      "tier": 3,
+      "auto": false
+    },
+    {
+      "id": "fumar_menos",
+      "area": "cuerpo",
+      "name": "Fumar menos que ayer",
+      "criterion": "Fumar menos cigarrillos que el día anterior.",
+      "tier": 2,
+      "private_default": true,
+      "auto": false
+    },
+    {
+      "id": "dia_sin_fumar",
+      "area": "cuerpo",
+      "name": "Día sin fumar",
+      "criterion": "Ningún cigarrillo ni vapeo en todo el día.",
+      "tier": 3,
+      "private_default": true,
+      "auto": false
+    },
+    {
+      "id": "redes_2h",
+      "area": "mente",
+      "name": "Menos de 2 h de redes",
+      "criterion": "Menos de 2 horas en redes sociales (mirá el tiempo de uso del teléfono).",
+      "tier": 2,
+      "auto": false
+    },
+    {
+      "id": "aire_libre_20",
+      "area": "mente",
+      "name": "20 minutos al aire libre",
+      "criterion": "Al menos 20 minutos afuera, sin auriculares.",
+      "tier": 1,
+      "auto": false
+    },
+    {
+      "id": "acostarse_fijo",
+      "area": "sueno",
+      "name": "Acostarte a la misma hora",
+      "criterion": "Ir a la cama dentro de ±30 minutos de tu hora objetivo.",
+      "tier": 2,
+      "auto": false
+    },
+    {
+      "id": "cama_sin_celular",
+      "area": "sueno",
+      "name": "Celular fuera de la cama",
+      "criterion": "Dejar el celular lejos de la cama al acostarte.",
+      "tier": 1,
+      "auto": false
+    },
+    {
+      "id": "max_2_tragos",
+      "area": "alimentacion",
+      "name": "Máximo 2 tragos",
+      "criterion": "Si tomás alcohol, no más de 2 tragos en el día.",
+      "tier": 2,
+      "private_default": true,
+      "auto": false
+    },
+    {
+      "id": "dia_sin_alcohol",
+      "area": "alimentacion",
+      "name": "Día sin alcohol",
+      "criterion": "Nada de alcohol en todo el día.",
+      "tier": 3,
+      "private_default": true,
+      "auto": false
+    },
+    {
+      "id": "sin_delivery",
+      "area": "alimentacion",
+      "name": "Día sin delivery",
+      "criterion": "Ni delivery ni comida rápida en todo el día.",
+      "tier": 2,
+      "auto": false
+    },
+    {
+      "id": "fruta_2",
+      "area": "alimentacion",
+      "name": "2 frutas",
+      "criterion": "Comer al menos 2 frutas en el día.",
+      "tier": 1,
+      "target": 2,
+      "unit": "frutas",
+      "auto": false
+    },
+    {
+      "id": "celular_manana",
+      "area": "foco",
+      "name": "Sin celular la primera hora",
+      "criterion": "No mirar el celular durante la primera hora después de despertarte.",
+      "tier": 1,
+      "auto": false
+    },
+    {
+      "id": "pomodoros_4",
+      "area": "foco",
+      "name": "4 bloques de 25 minutos",
+      "criterion": "4 bloques de 25 minutos de trabajo concentrado, con pausas.",
+      "tier": 2,
+      "target": 4,
+      "unit": "bloques",
+      "auto": false
+    },
+    {
+      "id": "ayudar_alguien",
+      "area": "social",
+      "name": "Ayudar a alguien",
+      "criterion": "Hacer algo concreto por otra persona sin que te lo pida.",
+      "tier": 1,
+      "auto": false
+    },
+    {
+      "id": "comida_compartida",
+      "area": "social",
+      "name": "Comer con alguien sin pantallas",
+      "criterion": "Una comida compartida, con los teléfonos guardados.",
+      "tier": 2,
+      "auto": false
     }
   ]
 }

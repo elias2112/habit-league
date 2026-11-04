@@ -6,7 +6,7 @@ PWA de hábitos para un grupo de amigos: check diario, XP, rachas y ranking del 
 
 ### 1. Supabase (plan gratuito)
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. **SQL Editor** → pegá todo [supabase/schema.sql](supabase/schema.sql) → *Run*. Después, en una consulta nueva, [supabase/migrations/002_quiz_personas_puntos.sql](supabase/migrations/002_quiz_personas_puntos.sql) → *Run*.
+2. **SQL Editor** → pegá todo [supabase/schema.sql](supabase/schema.sql) → *Run*. Después, cada una en una consulta nueva y en este orden: [002](supabase/migrations/002_quiz_personas_puntos.sql) y [003](supabase/migrations/003_grupo_objetivos_fotos.sql) → *Run*. La 003 también crea el bucket privado de fotos `evidencias` en Storage.
 3. **Authentication → Sign In / Providers → Email**: para un grupo de amigos conviene **desactivar "Confirm email"**.
    El SMTP integrado de Supabase solo manda unos pocos correos por hora; con la confirmación activada,
    varios amigos registrándose a la vez pueden quedarse sin correo. (Alternativa: configurar un SMTP propio.)
@@ -34,6 +34,7 @@ Para probar en el móvil en la misma red: `npm run dev -- --host` y abre la IP q
 | `npm run build` | Type-check + build de producción en `dist/` |
 | `npm test` | Tests del SQL (RLS, rachas, ranking, zonas horarias) sobre PGlite, sin Supabase |
 | `npm run icons` | Regenera los PNG de los iconos |
+| `npm run catalog` | Regenera el catálogo de la migración 003 desde `content/habits.json` |
 
 ## Hosting: GitHub Pages (gratis)
 La app se publica sola en `https://<usuario>.github.io/habit-league/` con cada push a `main`

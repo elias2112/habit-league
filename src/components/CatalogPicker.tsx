@@ -37,7 +37,11 @@ export default function CatalogPicker({ selected, onToggle, firstAreas = [], dis
                       <span className="min-w-0 flex-1">
                         <span className="block font-semibold">{h.name}</span>
                         <span className="block text-xs text-muted">{h.criterion}</span>
-                        <span className="mt-1 block"><Tier tier={h.tier} /></span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3">
+                          <Tier tier={h.tier} />
+                          {(h.target ?? 1) > 1 && <span className="text-xs text-muted">por partes: {h.target} {h.unit}</span>}
+                          {h.private_default && <span className="text-xs text-muted">🔒 privado</span>}
+                        </span>
                       </span>
                       <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 text-sm font-bold ${on ? 'border-primary bg-primary text-bg' : 'border-line text-muted'}`}>
                         {off ? '✓' : on ? '✓' : '+'}

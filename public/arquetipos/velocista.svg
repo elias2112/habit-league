@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Emblema velocista">
+  <defs><radialGradient id="g_velocista" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#F5C451" stop-opacity=".22"/><stop offset="1" stop-color="#171B22"/></radialGradient></defs>
+  <polygon points="128.0,16.0 225.0,72.0 225.0,184.0 128.0,240.0 31.0,184.0 31.0,72.0" fill="url(#g_velocista)" stroke="#F5C451" stroke-width="4" stroke-linejoin="round"/>
+  <polygon points="128.0,28.0 214.6,78.0 214.6,178.0 128.0,228.0 41.4,178.0 41.4,78.0" fill="none" stroke="#F5C451" stroke-opacity=".35" stroke-width="2" stroke-linejoin="round"/>
+  <g fill="none" stroke="#F5C451" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><polyline points="86,92 114,128 86,164"/><polyline points="118,92 146,128 118,164" opacity=".75"/><polyline points="150,92 178,128 150,164" opacity=".5"/></g>
+</svg>

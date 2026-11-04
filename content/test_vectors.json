@@ -93,7 +93,7 @@
         "R": 12
       },
       "code": "EMR",
-      "archetype": "arquitecto",
+      "archetype": "estratega",
       "priority": {
         "cuerpo": 0,
         "mente": 3,
@@ -159,7 +159,7 @@
         "R": 8
       },
       "code": "EMR",
-      "archetype": "arquitecto",
+      "archetype": "estratega",
       "priority": {
         "cuerpo": 3,
         "mente": 0,

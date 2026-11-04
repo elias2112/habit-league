@@ -9,6 +9,8 @@ import { archetypeById } from '../lib/quiz'
 import type { LeaderboardRow } from '../lib/types'
 import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Spinner } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
+import { MyRadar } from '../components/MyRadar'
+import { emblemUrl } from '../components/ArchetypeCard'
 
 const medal = ['🥇', '🥈', '🥉']
 
@@ -19,6 +21,7 @@ export default function Ranking() {
   const [rows, setRows] = useState<LeaderboardRow[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!selected) return
@@ -86,8 +89,9 @@ export default function Ranking() {
                 key={r.user_id}
                 className={`rounded-2xl border p-3.5 ${isMe ? 'border-primary bg-primary/10' : 'border-line bg-surface'}`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="w-8 text-center text-lg font-black tabular-nums text-muted">{medal[i] ?? i + 1}</span>
+                <button className="flex w-full items-center gap-3 text-left" onClick={() => setOpen(open === r.user_id ? null : r.user_id)} aria-expanded={open === r.user_id}>
+                  <span className="w-7 text-center text-lg font-black tabular-nums text-muted">{medal[i] ?? i + 1}</span>
+                  {arch ? <img src={emblemUrl(arch.id)} alt="" className="h-9 w-9 shrink-0" /> : <span className="h-9 w-9 shrink-0 rounded-xl bg-surface-2" />}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">
                       {r.display_name || r.username}
@@ -100,14 +104,20 @@ export default function Ranking() {
                     <span className="block font-black tabular-nums text-xp">{Math.round(r.total_points)}</span>
                     <span className="block text-xs tabular-nums text-muted">{r.pct == null ? '—' : `${Math.round(r.pct)}%`}</span>
                   </span>
-                </div>
+                </button>
+                {open === r.user_id && (
+                  <div className="mt-3 border-t border-line pt-3">
+                    {arch && <p className="mb-1 text-center text-sm"><b>{arch.name}</b> <span className="text-muted">· {arch.tagline}</span></p>}
+                    <MyRadar userId={r.user_id} size={260} caption={false} />
+                  </div>
+                )}
               </li>
             )
           })}
         </ol>
       )}
       <p className="mt-4 text-center text-xs text-muted">
-        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito.
+        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Los hábitos propios suman acá solo si este grupo los aprobó. Tocá a alguien para ver su radar.
       </p>
     </>
   )

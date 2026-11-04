@@ -7,7 +7,7 @@ import habitsData from '../../content/habits.json'
 export type AreaId = 'cuerpo' | 'mente' | 'sueno' | 'alimentacion' | 'foco' | 'social'
 export type Axis = 'E' | 'M' | 'R'
 
-export interface QuizOption { id: string; text: string; area?: string; value?: number }
+export interface QuizOption { id: string; text: string; area?: string; value?: number; suggest?: string[] }
 export interface QuizQuestion {
   id: string
   section: string
@@ -24,7 +24,13 @@ export interface Archetype {
   strengths: string[]; watch: string[]
   start_habits: number; tier_adjust: number; code: string
 }
-export interface CatalogHabit { id: string; area: AreaId; name: string; criterion: string; tier: number }
+export interface CatalogHabit {
+  id: string; area: AreaId; name: string; criterion: string; tier: number
+  target?: number; unit?: string
+  /** false = no entra en el paquete automático (se ve en el catálogo). */
+  auto?: boolean
+  private_default?: boolean
+}
 
 export type Answers = Record<string, string | string[]>
 
@@ -90,7 +96,7 @@ export function computeProfile(answers: Answers): QuizResult {
   const queues = new Map<AreaId, CatalogHabit[]>()
   for (const area of areas) {
     const max = Math.min(3, Math.max(1, levelTier(level[area]) + arch.tier_adjust))
-    const inArea = CATALOG.filter((h) => h.area === area)
+    const inArea = CATALOG.filter((h) => h.area === area && h.auto !== false)
     const allowed = inArea.filter((h) => h.tier <= max).sort((a, b) => b.tier - a.tier)
     const above = inArea.filter((h) => h.tier > max).sort((a, b) => a.tier - b.tier)
     queues.set(area, [...allowed, ...above])
@@ -106,11 +112,21 @@ export function computeProfile(answers: Answers): QuizResult {
   return { axes, code, archetype: arch.id, priority, level, areas, habits }
 }
 
+/** Hábitos que sugieren las preguntas directas (q21–q24), sin repetir y en orden. */
+export function directSuggestions(answers: Answers): string[] {
+  const out: string[] = []
+  for (const q of QUESTIONS.filter((x) => x.section === 'directas')) {
+    const o = q.options.find((x) => asList(answers[q.id]).includes(x.id))
+    for (const id of o?.suggest ?? []) if (!out.includes(id) && catalogById(id)) out.push(id)
+  }
+  return out
+}
+
 /** Puntos que vale cada hábito hoy: 100 × tier / suma de tiers activos (misma regla que la base). */
 export function pointsFor(tier: number, activeTiers: number[]): number {
   const sum = activeTiers.reduce((a, b) => a + b, 0)
   return sum ? Math.round((10000 * tier) / sum) / 100 : 0
 }
 
-export const TIER_LABEL: Record<number, string> = { 1: 'Fácil', 2: 'Media', 3: 'Difícil' }
+export const TIER_LABEL: Record<number, string> = { 1: 'Fácil', 2: 'Media', 3: 'Difícil', 4: 'Muy difícil' }
 export const MIN_ACTIVE_HABITS = 3

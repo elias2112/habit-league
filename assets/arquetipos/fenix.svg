@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Emblema fenix">
+  <defs><radialGradient id="g_fenix" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#FF7A45" stop-opacity=".22"/><stop offset="1" stop-color="#171B22"/></radialGradient></defs>
+  <polygon points="128.0,16.0 225.0,72.0 225.0,184.0 128.0,240.0 31.0,184.0 31.0,72.0" fill="url(#g_fenix)" stroke="#FF7A45" stroke-width="4" stroke-linejoin="round"/>
+  <polygon points="128.0,28.0 214.6,78.0 214.6,178.0 128.0,228.0 41.4,178.0 41.4,78.0" fill="none" stroke="#FF7A45" stroke-opacity=".35" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M128 70 C 138 94 166 106 166 138 C166 162 150 176 128 176 C106 176 90 162 90 140 C90 122 100 112 108 98 C112 108 118 112 122 112 C124 98 124 84 128 70 Z" fill="none" stroke="#FF7A45" stroke-width="6" stroke-linejoin="round"/><path d="M128 122 C 136 136 146 142 146 156 C146 166 138 172 128 172 C118 172 110 166 110 156 C110 146 120 138 128 122 Z" fill="#FF7A45" opacity=".8"/>
+</svg>

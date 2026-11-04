@@ -6,6 +6,7 @@ import { allTimezones, browserTimezone } from '../lib/date'
 import { Link } from 'react-router-dom'
 import { archetypeById } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
+import { MyRadar } from '../components/MyRadar'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 
 export default function Profile() {
@@ -78,7 +79,9 @@ export default function Profile() {
 
       {arch && (
         <div className="mt-5">
-          <ArchetypeCard a={arch} />
+          <ArchetypeCard a={arch}>
+            <div className="mt-5 border-t border-line pt-4"><MyRadar userId={profile.id} /></div>
+          </ArchetypeCard>
         </div>
       )}
       <Link to="/quiz" className="btn btn-ghost mt-3 w-full">{arch ? 'Repetir el quiz' : 'Hacer el quiz'}</Link>
