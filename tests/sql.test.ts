@@ -81,13 +81,6 @@ async function createGroup(owner: string, ...members: string[]) {
 }
 const groupAB = () => createGroup(A, B)
 
-/** Hábito propio (necesita aprobación si hay más gente en el grupo). */
-async function custom(user: string, name = 'Leer', tier = 1, extra: { target?: number; unit?: string } = {}) {
-  const [h] = await as<{ id: string }>(user,
-    `insert into habits (user_id, name, area, tier, target, unit) values ($1, $2, 'mente', $3, $4, $5) returning id`,
-    [user, name, tier, extra.target ?? 1, extra.unit ?? null])
-  return h.id
-}
 /** Hábito del catálogo (no necesita aprobación). */
 async function cat(user: string, catalogId: string, priv = false) {
   const [h] = await as<{ id: string }>(user,
@@ -95,8 +88,6 @@ async function cat(user: string, catalogId: string, priv = false) {
   return h.id
 }
 const done = (user: string, h: string, v = true) => as(user, `select set_habit_done($1, $2)`, [h, v])
-const pts = async (user: string) =>
-  Number((await admin<{ s: string }>(`select coalesce(sum(points),0)::text s from habit_logs where user_id = $1 and log_date = user_today($1)`, [user]))[0].s)
 
 // ─────────────────────────────────────────────────────────────────────────────
 

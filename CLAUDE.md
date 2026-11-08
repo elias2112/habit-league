@@ -10,6 +10,14 @@ Lee antes de empezar:
 ## Arquetipos de género neutro
 Los nombres y textos de arquetipos, quiz y hábitos están redactados sin género gramatical (Estratega, Perfeccionista, Aprendiz, Fénix, Autodidacta, Velocista, Nómada, Espíritu Libre). En la UI mostrar el nombre sin artículo ("Sos Estratega") y mantener esa convención en todo texto nuevo. Los emblemas están en `assets/arquetipos/<id>.svg` (copiados a `public/arquetipos/` para servirlos); el radar de referencia en `assets/radar-ejemplo.svg` (ver `docs/DESIGN.md`).
 
+## Modelo v3 (spec del dueño en `modifications/SPEC.md`; diseño en `docs/MODELO_V3.md`)
+- **Parámetros: un único lugar, `content/config.json`.** Nada de números del juego escritos en el código. El grupo puede cambiarlos por votación (`group_config`, rige desde el día siguiente).
+- **No guardar totales ni multiplicadores:** se guardan definiciones, fotos del plan (`plans` con `effective_from`) y eventos crudos (`habit_logs.count`, `vice_days`). El puntaje (`day_score`), las monedas (`coin_days`) y la billetera (`wallet_of`) se recalculan. `habit_logs.points` quedó deprecado; los días anteriores a la 006 están congelados en `legacy_days`.
+- La lógica pura está en `src/game/*.ts` (puerto de `modifications/reference/*.mjs`) y en SQL (`score_pure`, `coins_pure`, `decide_pure`). Deben dar **exactamente** lo mismo: `tests/v3.test.ts` las compara con casos al azar. En SQL se calcula en `double precision` y se redondea como `Math.round` (`r2`).
+- Todo cambio de plan, tienda o parámetros se propone (`propose_change`) y se vota (`vote_change`); rige desde el día siguiente. Excepciones: el plan inicial del quiz (`create_initial_plan`) y lo privado con alcance "solo yo".
+- Un grupo por persona (MVP).
+- Pendientes de revisión del dueño, **no cargar**: catálogo de objetivos y quiz nuevo (`docs/PROPUESTA_CONTENIDO_V3.md`), hábitos para Dinero/Habilidades/Creatividad/Carrera (`docs/MODELO_V3.md` §12). Eventos de objetivos: tabla preparada, sin UI. Recompensas que no son permisos: solo registro.
+
 ## Contenido como datos
 `content/quiz.json`, `content/archetypes.json`, `content/habits.json`, `content/goals.json`, `content/judgment.json` (Juicio y liga, ver `docs/JUEGO.md`) y `content/vices.json` (vicios y tropiezos) son la fuente de verdad. La app los importa (`src/lib/quiz.ts`, `src/lib/goals.ts`); no hardcodear preguntas ni hábitos en componentes. `content/test_vectors.json` trae entradas con la salida esperada; `tests/quiz.test.ts` verifica que el algoritmo las cumpla.
 - Al editar `content/habits.json`, `content/judgment.json` o `content/vices.json`: correr `npm run catalog` (regenera los bloques de datos de las migraciones 003, 004 y 005) y volver a ejecutar en Supabase esa migración **y todas las siguientes** (las posteriores redefinen funciones de las anteriores).
@@ -19,7 +27,7 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 - Vite + React + TypeScript, Tailwind CSS v4 (tokens de `docs/DESIGN.md` en `src/index.css`)
 - PWA con `vite-plugin-pwa`
 - Supabase (Auth, Postgres, Realtime, Storage) vía `@supabase/supabase-js`
-- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002_quiz_personas_puntos.sql`, `supabase/migrations/003_grupo_objetivos_fotos.sql`, `supabase/migrations/004_liga_juicio_cofre.sql`, `supabase/migrations/005_vicios.sql`. Todas se pueden re-ejecutar (en orden). La clave en el cliente es la *publishable key*.
+- Base de datos, en este orden: `supabase/schema.sql` y `supabase/migrations/002` a `006`. Todas se pueden re-ejecutar, **en orden**: las posteriores redefinen funciones de las anteriores. La clave en el cliente es la *publishable key*.
 - Hosting: GitHub Pages vía Actions (`.github/workflows/deploy.yml`). La app vive bajo `/<repo>/`: usar `import.meta.env.BASE_URL` / `appUrl()`, nunca rutas absolutas `/...`.
 
 ## Reglas de trabajo
@@ -34,7 +42,7 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 - El quiz es un juego propio, no un test psicológico validado. No presentarlo como diagnóstico ni inventar estudios o porcentajes de eficacia.
 - Si algo no está definido en `docs/PRODUCT.md` (marcado [ABIERTO]), preguntar al dueño en vez de decidir en silencio.
 - Verificar límites o precios de servicios externos con búsqueda antes de depender de ellos.
-- `npm test` debe pasar: `tests/sql.test.ts`, `tests/league.test.ts` y `tests/vices.test.ts` (arnés común en `tests/harness.ts`) (migraciones sobre PGlite con stub de auth y storage) y `tests/quiz.test.ts`.
+- `npm test` debe pasar: `tests/reference/*` (las 52 pruebas del dueño, copia literal), `tests/game.handcalc.test.ts` (casos a mano), `tests/v3.test.ts`, `tests/sql.test.ts`, `tests/league.test.ts` (arnés común en `tests/harness.ts`) (migraciones sobre PGlite con stub de auth y storage) y `tests/quiz.test.ts`.
 
 ## Pendientes conocidos
 - RLS, triggers y storage probados en PGlite con stubs; falta una prueba manual sobre Supabase real con dos cuentas.

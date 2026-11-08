@@ -4,14 +4,16 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
 import {
-  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, directSuggestions, directVices, isAnswered, pointsFor,
+  MIN_ACTIVE_HABITS, QUESTIONS, archetypeById, catalogById, computeProfile, directSuggestions, directVices, isAnswered,
   type Answers, type QuizResult,
 } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
-import { VICE_MULTIPLIER, fmtMult, viceById } from '../lib/vices'
+import { viceById } from '../lib/vices'
+import { catalogPillar } from '../components/CatalogPicker'
+import { PillarIcon, WEIGHT_LABEL } from '../components/ui'
 import Radar, { levelsToRadar } from '../components/Radar'
 import CatalogPicker from '../components/CatalogPicker'
-import { AreaIcon, ErrorBox, Tier } from '../components/ui'
+import { AreaIcon, ErrorBox } from '../components/ui'
 
 type Step = 'welcome' | 'quiz' | 'result' | 'pack' | 'group'
 const KEY = 'hl:quizDraft'
@@ -54,17 +56,18 @@ export default function Onboarding() {
   const [result, setResult] = useState<QuizResult | null>(null)
   const [pack, setPack] = useState<Set<string>>(new Set())
   const [vices, setVices] = useState<Set<string>>(new Set())
-  const [existing, setExisting] = useState<Set<string>>(new Set())
+  const [weights, setWeights] = useState<Record<string, number>>({})
+  const [hasPlan, setHasPlan] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { saveDraft({ answers, index }) }, [answers, index])
 
-  // Hábitos del catálogo que ya tiene activos (por si repite el quiz): no se duplican.
+  // ¿Ya tiene plan? (repetir el quiz actualiza el perfil; el plan se cambia con propuestas)
   useEffect(() => {
-    supabase.from('habits').select('catalog_id').eq('user_id', me).eq('archived', false)
-      .then(({ data }) => setExisting(new Set((data ?? []).map((r) => r.catalog_id).filter(Boolean) as string[])))
+    supabase.rpc('my_day').then(({ data }) => setHasPlan(Boolean((data as { has_plan?: boolean } | null)?.has_plan)))
   }, [me])
+
 
   const q = QUESTIONS[index]
 
@@ -84,7 +87,7 @@ export default function Onboarding() {
     if (index < QUESTIONS.length - 1) { setIndex(index + 1); return }
     const r = computeProfile(a)
     setResult(r)
-    setPack(new Set([...r.habits, ...directSuggestions(a)]))
+    setPack(new Set([...r.habits, ...directSuggestions(a)].filter((id) => catalogPillar(catalogById(id)!.area))))
     setVices(new Set(directVices(a)))
     setStep('result')
   }
@@ -96,19 +99,21 @@ export default function Onboarding() {
     else if (step === 'pack') setStep('result')
   }
 
-  const totalSelected = new Set([...pack, ...existing]).size
+  const totalSelected = pack.size
 
   async function finish() {
     if (!result) return
     setBusy(true); setError(null)
     try {
-      const toInsert = [...pack].filter((id) => !existing.has(id)).map((id) => {
-        const h = catalogById(id)!
-        return { user_id: me, name: h.name, catalog_id: h.id, private: Boolean(h.private_default) }
-      })
-      if (toInsert.length) {
-        const { error } = await supabase.from('habits').insert(toInsert)
-        if (error) throw error
+      if (!hasPlan) {
+        // Plan inicial: rige desde hoy y sin votación (los cambios posteriores se votan y rigen desde mañana).
+        const habits = [...pack].map((id) => {
+          const c = catalogById(id)!
+          return { catalog_id: c.id, weight: weights[id] ?? Math.min(3, c.tier), private: Boolean(c.private_default) }
+        })
+        const vicesPayload = [...vices].map((id) => ({ name: viceById(id)?.name ?? id, suggestion_id: id, severity: 'normal', weight: 1 }))
+        const { error: ep } = await supabase.rpc('create_initial_plan', { p_habits: habits, p_vices: vicesPayload, p_objectives: [] })
+        if (ep) throw ep
       }
       const { error } = await supabase.from('profiles').update({
         archetype: result.archetype,
@@ -117,11 +122,6 @@ export default function Onboarding() {
         quiz_completed_at: new Date().toISOString(),
       }).eq('id', me)
       if (error) throw error
-      // Vicios que no se quieren dejar: se declaran (×0,9 en los puntos diarios).
-      for (const v of vices) {
-        const { error: ev } = await supabase.rpc('declare_vice', { p_vice: v, p_name: null })
-        if (ev && !/Ya tenés declarado/.test(ev.message)) throw ev
-      }
       saveDraft(null)
       const { count } = await supabase.from('group_members').select('group_id', { count: 'exact', head: true }).eq('user_id', me)
       if (count) { await refreshProfile(); navigate('/', { replace: true }) }
@@ -231,7 +231,6 @@ export default function Onboarding() {
   // ───── Paquete de hábitos
   if (step === 'pack' && result) {
     const chosen = [...pack].map((id) => catalogById(id)!).filter(Boolean)
-    const tiers = chosen.map((h) => h.tier)
     const missing = Math.max(0, MIN_ACTIVE_HABITS - totalSelected)
     return (
       <Shell
@@ -247,34 +246,40 @@ export default function Onboarding() {
         {BackBtn}
         <h1 className="text-2xl font-bold">Tu paquete inicial</h1>
         <p className="mt-1 text-sm text-muted">
-          Cada día podés sumar hasta 100 puntos. Los hábitos más difíciles valen más. Quitá, cambiá o agregá los que quieras.
+          Cada día podés sumar hasta 100 puntos. Elegí cuánto te cuesta cada hábito: lo que más te cuesta vale más. Este plan rige desde hoy; después, los cambios se votan en el grupo y rigen desde el día siguiente.
         </p>
 
         {chosen.length > 0 && (
           <ul className="mt-4 space-y-2">
             {chosen.map((h) => (
               <li key={h.id} className="flex items-center gap-3 rounded-2xl border border-primary/60 bg-primary/10 p-3">
-                <AreaIcon area={h.area} size="sm" />
+                <PillarIcon pillar={catalogPillar(h.area)} size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{h.name}</span>
-                  <Tier tier={h.tier} />
+                  <span className="mt-1 flex gap-1" role="group" aria-label="¿Cuánto te cuesta?">
+                    {[1, 2, 3].map((w) => (
+                      <button key={w} type="button" onClick={() => setWeights({ ...weights, [h.id]: w })}
+                        className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${(weights[h.id] ?? Math.min(3, h.tier)) === w ? 'bg-primary text-bg' : 'bg-surface-2 text-muted'}`}>
+                        {WEIGHT_LABEL[w]}
+                      </button>
+                    ))}
+                  </span>
                 </span>
-                <span className="text-sm font-bold text-xp">{Math.round(pointsFor(h.tier, tiers))} pts</span>
                 <button onClick={() => { const n = new Set(pack); n.delete(h.id); setPack(n) }} className="grid h-9 w-9 place-items-center rounded-full text-muted hover:bg-surface-2" aria-label={`Quitar ${h.name}`}>✕</button>
               </li>
             ))}
           </ul>
         )}
-        {existing.size > 0 && <p className="mt-2 text-xs text-muted">Además ya tenés {existing.size} hábitos activos del catálogo.</p>}
+        {hasPlan && <p className="mt-2 rounded-xl border border-xp/40 bg-xp/10 px-3 py-2 text-xs text-xp">Ya tenés un plan: al terminar se actualiza tu arquetipo, pero tu plan no cambia. Para cambiarlo, proponé cambios en Mi plan.</p>}
         {[...directVices(answers)].length > 0 && (
           <div className="mt-4 rounded-2xl border border-danger/40 bg-danger/10 p-3">
-            <p className="text-sm font-semibold">Vicios que no querés dejar</p>
-            <p className="text-xs text-muted">No son hábitos para cumplir: si los declarás, tus puntos diarios se multiplican por {fmtMult(VICE_MULTIPLIER)} por cada uno. Es privado.</p>
+            <p className="text-sm font-semibold">Vicios para seguir</p>
+            <p className="text-xs text-muted">No son hábitos para cumplir: cada día marcás "no lo hice" (suma) o "lo hice" (multiplica tus puntos por su gravedad, salvo que tengas un permiso). Es privado.</p>
             {directVices(answers).map((id) => (
               <label key={id} className="mt-2 flex items-center gap-2 text-sm">
                 <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={vices.has(id)}
                   onChange={(e) => { const n = new Set(vices); if (e.target.checked) n.add(id); else n.delete(id); setVices(n) }} />
-                Declarar «{viceById(id)?.name ?? id}» ({fmtMult(VICE_MULTIPLIER)})
+                Seguir «{viceById(id)?.name ?? id}»
               </label>
             ))}
           </div>
@@ -283,8 +288,6 @@ export default function Onboarding() {
         <h2 className="mb-3 mt-8 text-lg font-bold">Agregar del catálogo</h2>
         <CatalogPicker
           selected={pack}
-          disabled={existing}
-          firstAreas={result.areas}
           onToggle={(id) => { const n = new Set(pack); if (n.has(id)) n.delete(id); else n.add(id); setPack(n) }}
         />
       </Shell>

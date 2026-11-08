@@ -1,254 +1,170 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { errorMessage } from '../lib/errors'
-import { AREAS, MIN_ACTIVE_HABITS, TIER_LABEL, catalogById, pointsFor } from '../lib/quiz'
-import { reviewBadge, useMyReviews } from '../lib/reviews'
-import type { Habit } from '../lib/types'
+import { catalogById } from '../lib/quiz'
+import { useMyDay, type DayHabit, type DayVice } from '../lib/day'
+import { describeChange, propose, type ChangeKind, type ChangeRequest, type Scope } from '../lib/changes'
+import { useGroups } from '../lib/groups'
+import { CONFIG, type Severity } from '../game/config'
+import { VICES } from '../lib/vices'
 import CatalogPicker from '../components/CatalogPicker'
 import Goals from '../components/Goals'
-import Vices from '../components/Vices'
-import { AreaIcon, AreaTag, Empty, ErrorBox, Loading, PageHeader, Tier } from '../components/ui'
-
-interface Draft { name: string; criterion: string; area: string; tier: number; partial: boolean; target: number; unit: string }
-
-function CustomHabitForm({ onSubmit, onCancel }: { onSubmit: (d: Draft) => Promise<void>; onCancel: () => void }) {
-  const [d, setD] = useState<Draft>({ name: '', criterion: '', area: 'cuerpo', tier: 2, partial: false, target: 4, unit: '' })
-  const [busy, setBusy] = useState(false)
-
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    if (!d.name.trim()) return
-    setBusy(true)
-    try { await onSubmit({ ...d, name: d.name.trim(), criterion: d.criterion.trim(), unit: d.unit.trim() }) } finally { setBusy(false) }
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-3">
-      <div>
-        <label className="label" htmlFor="hname">Nombre</label>
-        <input id="hname" className="input" maxLength={60} required placeholder="Ej.: Practicar guitarra 15 minutos" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
-      </div>
-      <div>
-        <label className="label" htmlFor="hcrit">¿Cuándo cuenta como hecho? (opcional)</label>
-        <input id="hcrit" className="input" maxLength={160} placeholder="Ej.: 15 minutos seguidos con la guitarra" value={d.criterion} onChange={(e) => setD({ ...d, criterion: e.target.value })} />
-      </div>
-      <div>
-        <label className="label" htmlFor="harea">Área</label>
-        <select id="harea" className="input" value={d.area} onChange={(e) => setD({ ...d, area: e.target.value })}>
-          {AREAS.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-        </select>
-      </div>
-      <div>
-        <span className="label">Peso para vos (dificultad)</span>
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map((t) => (
-            <button type="button" key={t} onClick={() => setD({ ...d, tier: t })} className={`btn ${d.tier === t ? 'btn-primary' : 'btn-ghost'}`}>
-              {TIER_LABEL[t]}
-            </button>
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-muted">Más peso = más parte de tus 100 puntos diarios. Agregar hábitos no te da más puntos: se reparten.</p>
-      </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={d.partial} onChange={(e) => setD({ ...d, partial: e.target.checked })} />
-        Se marca por partes (ej. vasos, páginas, series)
-      </label>
-      {d.partial && (
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="label" htmlFor="htarget">Meta diaria</label>
-            <input id="htarget" className="input" type="number" min={2} max={100000} required value={d.target} onChange={(e) => setD({ ...d, target: Number(e.target.value) })} />
-          </div>
-          <div>
-            <label className="label" htmlFor="hunit">Unidad</label>
-            <input id="hunit" className="input" maxLength={20} required placeholder="series" value={d.unit} onChange={(e) => setD({ ...d, unit: e.target.value })} />
-          </div>
-        </div>
-      )}
-      <p className="rounded-xl border border-xp/40 bg-xp/10 px-3 py-2 text-xs text-xp">
-        Tu grupo lo tiene que aprobar (al menos la mitad del resto). Mientras tanto podés marcarlo: si lo aprueban, esos días suman; si no, no.
-        Después de crearlo solo vas a poder bajarle la dificultad.
-      </p>
-      <div className="flex gap-2">
-        <button className="btn btn-primary flex-1" disabled={busy || !d.name.trim()}>Proponer hábito</button>
-        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
-      </div>
-    </form>
-  )
-}
-
-type Mode = null | 'catalog' | 'custom'
+import { ErrorBox, Loading, PageHeader, PillarIcon, PillarSelect, PillarTag, Weight, WeightPicker } from '../components/ui'
 
 export default function Habits() {
-  const [tab, setTab] = useState<'habits' | 'goals' | 'vices'>('habits')
+  const [tab, setTab] = useState<'plan' | 'chests'>('plan')
   return (
     <>
-      <PageHeader title="Mis hábitos" subtitle="Tu grupo ve tus hábitos y lo que marcás (menos los privados)." />
-      <div className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-surface p-1" role="tablist">
-        {(['habits', 'goals', 'vices'] as const).map((t) => (
-          <button
-            key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-            className={`min-h-10 rounded-lg text-sm font-semibold ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}
-          >
-            {t === 'habits' ? 'Hábitos' : t === 'goals' ? 'Objetivos' : 'Vicios'}
+      <PageHeader title="Mi plan" subtitle="Los cambios se votan en el grupo y rigen desde mañana." />
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
+        {(['plan', 'chests'] as const).map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+            className={`min-h-10 rounded-lg text-sm font-semibold ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>
+            {t === 'plan' ? 'Hábitos, vicios y objetivos' : 'Cofres de ahorro'}
           </button>
         ))}
       </div>
-      {tab === 'habits' ? <HabitsList /> : tab === 'goals' ? <Goals /> : <Vices />}
+      {tab === 'plan' ? <Plan /> : <Goals />}
     </>
   )
 }
 
-function HabitsList() {
+function ScopePicker({ value, onChange, allowGroup = true }: { value: Scope; onChange: (s: Scope) => void; allowGroup?: boolean }) {
+  return (
+    <div>
+      <span className="label">¿Para quién?</span>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" className={`btn text-sm ${value === 'me' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('me')}>Solo yo</button>
+        <button type="button" disabled={!allowGroup} className={`btn text-sm ${value === 'group' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('group')}>Todo el grupo</button>
+      </div>
+      {value === 'group' && <p className="mt-1 text-xs text-muted">Se agrega al plan de cada miembro (peso inicial {CONFIG.groupScopeDefaultWeight} para los demás; cada uno lo cambia después).</p>}
+    </div>
+  )
+}
+
+type Panel = null | { kind: 'catalog' } | { kind: 'custom' } | { kind: 'vice' } | { kind: 'objective' } | { kind: 'habit'; h: DayHabit } | { kind: 'viceEdit'; v: DayVice }
+type Send = (scope: Scope, kind: ChangeKind, payload: Record<string, unknown>) => Promise<boolean>
+
+function Plan() {
   const { session } = useAuth()
   const me = session!.user.id
-  const [habits, setHabits] = useState<Habit[]>([])
-  const [loading, setLoading] = useState(true)
+  const { day, reload } = useMyDay()
+  const { selected: group, loading: gLoading } = useGroups()
+  const [panel, setPanel] = useState<Panel>(null)
+  const [mine, setMine] = useState<ChangeRequest[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [mode, setMode] = useState<Mode>(null)
-  const [picked, setPicked] = useState<Set<string>>(new Set())
-  const { byHabit, reload: reloadReviews } = useMyReviews()
+  const [ok, setOk] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    const { data, error } = await supabase.from('habits').select('*').eq('user_id', me).order('created_at')
-    if (error) setError(errorMessage(error))
-    else setHabits(data as Habit[])
-    setLoading(false)
-  }, [me])
+  const loadMine = useCallback(async () => {
+    if (!group) return
+    const { data } = await supabase.rpc('group_requests', { p_group: group.id })
+    setMine(((data ?? []) as ChangeRequest[]).filter((r) => r.proposer_id === me))
+  }, [group, me])
+  useEffect(() => { void loadMine() }, [loadMine])
 
-  useEffect(() => { void load() }, [load])
-
-  async function run(p: PromiseLike<{ error: unknown }>) {
-    const { error } = await p
+  const send: Send = async (scope, kind, payload) => {
+    setError(null); setOk(null)
+    const { error } = await propose(scope, kind, payload)
     if (error) { setError(errorMessage(error)); return false }
-    setError(null)
-    await load()
-    await reloadReviews()
+    setOk('Propuesta enviada. Si se aprueba, rige desde mañana.')
+    setPanel(null)
+    await Promise.all([reload(), loadMine()])
     return true
   }
 
-  const active = habits.filter((h) => !h.archived)
-  const archived = habits.filter((h) => h.archived)
-  const tiers = active.map((h) => h.tier)
-  const activeCatalog = new Set(active.map((h) => h.catalog_id).filter(Boolean) as string[])
+  if (!day || gLoading) return <Loading />
+  if (!group) return <p className="card text-sm text-muted">Para cambiar tu plan, primero <Link to="/grupos" className="font-semibold text-primary">uníte a un grupo o creá uno</Link>: los cambios se votan ahí.</p>
 
-  const addCustom = async (d: Draft) => {
-    const row = { user_id: me, name: d.name, criterion: d.criterion || null, area: d.area, tier: d.tier, target: d.partial ? d.target : 1, unit: d.partial ? d.unit : null }
-    if (await run(supabase.from('habits').insert(row))) setMode(null)
-  }
-  const addFromCatalog = async () => {
-    // Si estaba archivado, se restaura en vez de duplicarlo.
-    const restore = archived.filter((h) => h.catalog_id && picked.has(h.catalog_id))
-    const restoreIds = new Set(restore.map((h) => h.catalog_id))
-    const rows = [...picked].filter((id) => !restoreIds.has(id)).map((id) => {
-      const c = catalogById(id)!
-      return { user_id: me, name: c.name, catalog_id: c.id, private: Boolean(c.private_default) }
-    })
-    if (restore.length && !(await run(supabase.from('habits').update({ archived: false }).in('id', restore.map((h) => h.id))))) return
-    if (rows.length && !(await run(supabase.from('habits').insert(rows)))) return
-    setPicked(new Set())
-    setMode(null)
-  }
-  const archive = (h: Habit) => {
-    if (active.length <= MIN_ACTIVE_HABITS) {
-      setError(`Necesitás al menos ${MIN_ACTIVE_HABITS} hábitos activos. Agregá otro antes de archivar este.`)
-      return
-    }
-    void run(supabase.from('habits').update({ archived: true }).eq('id', h.id))
-  }
-
-  if (loading) return <Loading />
+  const inPlan = new Set(day.habits.map((h) => h.catalog_id).filter(Boolean) as string[])
+  const pending = mine.filter((r) => r.status === 'pending')
+  const decided = mine.filter((r) => r.status !== 'pending')
 
   return (
     <>
       <ErrorBox>{error}</ErrorBox>
+      {ok && <p className="mb-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">{ok}</p>}
 
-      {mode === null && (
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <button className="btn btn-primary" onClick={() => setMode('catalog')}>+ Del catálogo</button>
-          <button className="btn btn-ghost" onClick={() => setMode('custom')}>+ Hábito propio</button>
-        </div>
-      )}
-
-      {mode === 'custom' && (
+      {pending.length > 0 && (
         <section className="card mb-4">
-          <CustomHabitForm onSubmit={addCustom} onCancel={() => setMode(null)} />
+          <h2 className="mb-2 font-semibold">Tus propuestas en votación</h2>
+          <ul className="space-y-1 text-sm">
+            {pending.map((r) => (
+              <li key={r.id} className="flex justify-between gap-2">
+                <span>{describeChange(r)}</span>
+                <span className="shrink-0 text-xs text-muted">👍 {r.yes} · 👎 {r.no} de {r.voters}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
-      {mode === 'catalog' && (
-        <section className="mb-6">
-          <div className="sticky top-0 z-10 -mx-4 mb-3 flex gap-2 bg-bg/95 px-4 py-2 backdrop-blur">
-            <button className="btn btn-primary flex-1" disabled={picked.size === 0} onClick={addFromCatalog}>
-              Agregar {picked.size || ''}
-            </button>
-            <button className="btn btn-ghost" onClick={() => { setPicked(new Set()); setMode(null) }}>Cancelar</button>
-          </div>
-          <CatalogPicker
-            selected={picked}
-            disabled={activeCatalog}
-            onToggle={(id) => { const n = new Set(picked); if (n.has(id)) n.delete(id); else n.add(id); setPicked(n) }}
-          />
-        </section>
-      )}
-
-      {active.length > 0 && active.length < MIN_ACTIVE_HABITS && (
-        <p className="mb-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
-          Tenés {active.length}. El mínimo son {MIN_ACTIVE_HABITS} hábitos activos.
-        </p>
-      )}
-
-      {active.length === 0 && mode === null && <Empty>No tenés hábitos activos.</Empty>}
-
+      <h2 className="mb-2 font-bold">Hábitos ({day.habits.length})</h2>
       <ul className="space-y-2">
-        {active.map((h) => {
-          const badge = h.catalog_id ? null : reviewBadge(byHabit.get(h.id))
-          const criterion = h.criterion ?? catalogById(h.catalog_id)?.criterion
-          return (
-            <li key={h.id} className="card">
-              <div className="flex items-start gap-3">
-                <AreaIcon area={h.area} />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{h.name} {h.private && <span className="text-xs text-muted">🔒</span>}</p>
-                  {criterion && <p className="text-xs text-muted">{criterion}</p>}
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <AreaTag area={h.area} />
-                    <Tier tier={h.tier} />
-                    <span className="text-xs font-bold text-xp">{Math.round(pointsFor(h.tier, tiers))} pts</span>
-                    {h.target > 1 && <span className="text-xs text-muted">meta {h.target} {h.unit}</span>}
-                    <span className="text-xs text-muted">{h.catalog_id ? 'Catálogo' : h.goal_id ? 'De un objetivo' : 'Propio'}</span>
-                  </p>
-                  {badge && <p className={`mt-1 text-xs font-semibold ${badge.tone === 'pending' ? 'text-xp' : 'text-danger'}`}>{badge.tone === 'pending' ? '⏳' : '✕'} {badge.text}</p>}
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {h.catalog_id && (
-                      <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => run(supabase.from('habits').update({ private: !h.private }).eq('id', h.id))}>
-                        {h.private ? '🔓 Hacer visible' : '🔒 Hacer privado'}
-                      </button>
-                    )}
-                    {!h.catalog_id && h.tier > 1 && (
-                      <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => run(supabase.from('habits').update({ tier: h.tier - 1 }).eq('id', h.id))}>
-                        Bajar a {TIER_LABEL[h.tier - 1]}
-                      </button>
-                    )}
-                    <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => archive(h)}>Archivar</button>
-                  </div>
-                </div>
-              </div>
-            </li>
-          )
-        })}
+        {day.habits.map((h) => (
+          <li key={h.id} className="card">
+            <button className="flex w-full items-start gap-3 text-left" onClick={() => setPanel(panel?.kind === 'habit' && panel.h.id === h.id ? null : { kind: 'habit', h })}>
+              <PillarIcon pillar={h.pillar} />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{h.name} {h.private && <span className="text-xs text-muted">🔒</span>}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <PillarTag pillar={h.pillar} /><Weight w={h.weight} />
+                  {h.target != null && <span className="text-xs text-muted">meta {h.target} {h.unit}</span>}
+                </span>
+              </span>
+              <span className="text-sm text-muted">Cambiar ›</span>
+            </button>
+            {panel?.kind === 'habit' && panel.h.id === h.id && <HabitChange h={h} canRemove={day.habits.length > CONFIG.minActiveHabits} onSend={send} />}
+          </li>
+        ))}
       </ul>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button className="btn btn-primary" onClick={() => setPanel({ kind: 'catalog' })}>+ Del catálogo</button>
+        <button className="btn btn-ghost" onClick={() => setPanel({ kind: 'custom' })}>+ Hábito propio</button>
+      </div>
+      {panel?.kind === 'catalog' && <CatalogAdd inPlan={inPlan} onSend={send} onCancel={() => setPanel(null)} />}
+      {panel?.kind === 'custom' && <CustomAdd onSend={send} onCancel={() => setPanel(null)} />}
 
-      {archived.length > 0 && (
-        <details className="mt-6">
-          <summary className="cursor-pointer text-sm font-semibold text-muted">Archivados ({archived.length})</summary>
-          <ul className="mt-2 space-y-2">
-            {archived.map((h) => (
-              <li key={h.id} className="card flex items-center gap-3 opacity-70">
-                <AreaIcon area={h.area} size="sm" />
-                <span className="flex-1 truncate">{h.name}</span>
-                <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => run(supabase.from('habits').update({ archived: false }).eq('id', h.id))}>Restaurar</button>
+      <h2 className="mb-2 mt-8 font-bold">Vicios ({day.vices.length})</h2>
+      <p className="mb-2 text-xs text-muted">Cosas que querés evitar o reducir. Se marcan cada día en Hoy. Son privados: el grupo ve "Vicio" y su peso.</p>
+      <ul className="space-y-2">
+        {day.vices.map((v) => (
+          <li key={v.id} className="card">
+            <button className="flex w-full items-center justify-between gap-3 text-left" onClick={() => setPanel(panel?.kind === 'viceEdit' && panel.v.id === v.id ? null : { kind: 'viceEdit', v })}>
+              <span><span className="block font-semibold">{v.name}</span><span className="flex gap-3 text-xs text-muted"><Weight w={v.weight} /> {v.severity}</span></span>
+              <span className="text-sm text-muted">Cambiar ›</span>
+            </button>
+            {panel?.kind === 'viceEdit' && panel.v.id === v.id && <ViceChange v={v} onSend={send} />}
+          </li>
+        ))}
+      </ul>
+      <button className="btn btn-ghost mt-2 w-full" onClick={() => setPanel({ kind: 'vice' })}>+ Vicio</button>
+      {panel?.kind === 'vice' && <ViceAdd onSend={send} onCancel={() => setPanel(null)} />}
+
+      <h2 className="mb-2 mt-8 font-bold">Objetivos ({day.objectives.length}/{CONFIG.maxObjectives})</h2>
+      <ul className="space-y-2">
+        {day.objectives.map((o) => (
+          <li key={o.id} className="card flex items-center justify-between gap-3">
+            <span className="font-semibold">🎯 {o.title}</span>
+            <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => send('me', 'objective.remove', { objective_id: o.id, title: o.title })}>Proponer sacarlo</button>
+          </li>
+        ))}
+      </ul>
+      {day.objectives.length < CONFIG.maxObjectives && (
+        panel?.kind === 'objective'
+          ? <ObjectiveAdd onSend={send} onCancel={() => setPanel(null)} />
+          : <button className="btn btn-ghost mt-2 w-full" onClick={() => setPanel({ kind: 'objective' })}>+ Objetivo</button>
+      )}
+
+      {decided.length > 0 && (
+        <details className="mt-8">
+          <summary className="cursor-pointer text-sm font-semibold text-muted">Decididas esta semana ({decided.length})</summary>
+          <ul className="mt-2 space-y-1 text-sm">
+            {decided.map((r) => (
+              <li key={r.id} className="flex justify-between gap-2">
+                <span className="text-muted">{describeChange(r)}</span>
+                <span className={r.status === 'approved' ? 'text-alimentacion' : 'text-danger'}>{r.status === 'approved' ? 'Aprobada' : 'Rechazada'}</span>
               </li>
             ))}
           </ul>
@@ -256,8 +172,169 @@ function HabitsList() {
       )}
 
       <p className="mt-6 text-xs text-muted">
-        Tus hábitos activos se reparten 100 puntos por día según su peso. Los privados (solo del catálogo) suman igual, pero tu grupo ve "Hábito privado" sin nombre ni foto.
+        Ojo con los pesos: marcar como difícil algo que ya te sale fácil sube tu puntaje. Por eso el grupo ve los pesos de todos, los cambios se votan y rigen desde mañana, y hay un mínimo de {CONFIG.minActiveHabits} hábitos.
       </p>
     </>
+  )
+}
+
+function HabitChange({ h, canRemove, onSend }: { h: DayHabit; canRemove: boolean; onSend: Send }) {
+  const [w, setW] = useState(h.weight)
+  const [target, setTarget] = useState(h.target != null ? String(h.target) : '')
+  const [scope, setScope] = useState<Scope>('me')
+  const base = { habit_id: h.id, name: h.name }
+  return (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      {!h.private && <ScopePicker value={scope} onChange={setScope} />}
+      <WeightPicker value={w} onChange={setW} />
+      <button className="btn btn-primary w-full" disabled={w === h.weight} onClick={() => onSend(scope, 'habit.weight', { ...base, weight: w })}>Proponer peso {w}</button>
+      {(h.target != null || h.unit) && (
+        <div className="flex gap-2">
+          <input className="input" type="number" min={1} value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Nueva meta" />
+          <button className="btn btn-ghost" disabled={!target || Number(target) === h.target} onClick={() => onSend(scope, 'habit.target', { ...base, target: Number(target) })}>Proponer meta</button>
+        </div>
+      )}
+      <button className="btn btn-ghost w-full text-danger" disabled={!canRemove} onClick={() => onSend(scope, 'habit.remove', base)}>
+        {canRemove ? 'Proponer sacarlo' : `Mínimo ${CONFIG.minActiveHabits} hábitos: agregá otro antes`}
+      </button>
+    </div>
+  )
+}
+
+function CatalogAdd({ inPlan, onSend, onCancel }: { inPlan: Set<string>; onSend: Send; onCancel: () => void }) {
+  const [pick, setPick] = useState<string | null>(null)
+  const [w, setW] = useState(2)
+  const [scope, setScope] = useState<Scope>('me')
+  const [priv, setPriv] = useState(false)
+  const c = catalogById(pick)
+  return (
+    <section className="mt-3 space-y-3">
+      <CatalogPicker selected={new Set(pick ? [pick] : [])} disabled={inPlan}
+        onToggle={(id) => { setPick(id === pick ? null : id); const ci = catalogById(id); setW(Math.min(3, ci?.tier ?? 2)); setPriv(Boolean(ci?.private_default)) }} />
+      {c && (
+        <div className="card sticky bottom-24 space-y-3">
+          <p className="font-semibold">{c.name}</p>
+          <WeightPicker value={w} onChange={setW} />
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={priv} onChange={(e) => { setPriv(e.target.checked); if (e.target.checked) setScope('me') }} />
+            Privado (el grupo ve "Hábito privado" y su peso; no se vota)
+          </label>
+          {!priv && <ScopePicker value={scope} onChange={setScope} />}
+          <div className="flex gap-2">
+            <button className="btn btn-primary flex-1" onClick={() => onSend(priv ? 'me' : scope, 'habit.add', { catalog_id: c.id, name: c.name, weight: w, private: priv })}>Proponer</button>
+            <button className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CustomAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void }) {
+  const [name, setName] = useState('')
+  const [criterion, setCriterion] = useState('')
+  const [pillar, setPillar] = useState('cuerpo')
+  const [w, setW] = useState(2)
+  const [measurable, setMeasurable] = useState(false)
+  const [target, setTarget] = useState(500)
+  const [unit, setUnit] = useState('')
+  const [scope, setScope] = useState<Scope>('me')
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    void onSend(scope, 'habit.add', { name: name.trim(), criterion: criterion.trim() || null, pillar, weight: w, ...(measurable ? { target, unit: unit.trim() } : {}) })
+  }
+  return (
+    <form onSubmit={submit} className="card mt-3 space-y-3">
+      <div><label className="label" htmlFor="cn">Nombre</label><input id="cn" className="input" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div><label className="label" htmlFor="cc">¿Cuándo cuenta como hecho? (opcional)</label><input id="cc" className="input" maxLength={160} value={criterion} onChange={(e) => setCriterion(e.target.value)} /></div>
+      <div><label className="label" htmlFor="cp">Pilar</label><PillarSelect id="cp" value={pillar} onChange={setPillar} /></div>
+      <WeightPicker value={w} onChange={setW} />
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={measurable} onChange={(e) => setMeasurable(e.target.checked)} />
+        Tiene una meta medible (ej. 500 palabras)
+      </label>
+      {measurable && (
+        <div className="grid grid-cols-2 gap-2">
+          <input className="input" type="number" min={2} required value={target} onChange={(e) => setTarget(Number(e.target.value))} aria-label="Meta diaria" />
+          <input className="input" required maxLength={20} placeholder="palabras" value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Unidad" />
+        </div>
+      )}
+      <ScopePicker value={scope} onChange={setScope} />
+      <div className="flex gap-2">
+        <button className="btn btn-primary flex-1" disabled={!name.trim()}>Proponer</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+    </form>
+  )
+}
+
+const SEVERITIES: Severity[] = ['leve', 'normal', 'grave']
+
+function ViceAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void }) {
+  const [name, setName] = useState('')
+  const [suggestion, setSuggestion] = useState<string | null>(null)
+  const [severity, setSeverity] = useState<Severity>('normal')
+  const [w, setW] = useState(1)
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); void onSend('me', 'vice.add', { name: name.trim(), suggestion_id: suggestion, severity, weight: w }) }} className="card mt-3 space-y-3">
+      <div>
+        <label className="label" htmlFor="vn">¿Qué querés evitar o reducir?</label>
+        <input id="vn" className="input" required maxLength={60} value={name} onChange={(e) => { setName(e.target.value); setSuggestion(null) }} />
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {VICES.map((v) => (
+            <button type="button" key={v.id} className={`rounded-full px-3 py-1 text-xs ${suggestion === v.id ? 'bg-primary text-bg' : 'bg-surface-2 text-ink'}`}
+              onClick={() => { setName(v.name); setSuggestion(v.id) }}>{v.name}</button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <span className="label">Gravedad (multiplica el día si lo hacés sin permiso)</span>
+        <div className="grid grid-cols-3 gap-2">
+          {SEVERITIES.map((s) => (
+            <button type="button" key={s} onClick={() => setSeverity(s)} className={`btn text-sm ${severity === s ? 'btn-primary' : 'btn-ghost'}`}>
+              {s} ×{CONFIG.severity[s].toLocaleString('es-ES')}
+            </button>
+          ))}
+        </div>
+      </div>
+      <WeightPicker value={w} onChange={setW} label="¿Cuánto te cuesta evitarlo?" />
+      <p className="text-xs text-muted">Es privado: se aprueba sin votación y rige desde mañana.</p>
+      <div className="flex gap-2">
+        <button className="btn btn-primary flex-1" disabled={!name.trim()}>Agregar</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+    </form>
+  )
+}
+
+function ViceChange({ v, onSend }: { v: DayVice; onSend: Send }) {
+  const [w, setW] = useState(v.weight)
+  const [severity, setSeverity] = useState<Severity>(v.severity)
+  const base = { vice_id: v.id, name: v.name }
+  return (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      <WeightPicker value={w} onChange={setW} label="¿Cuánto te cuesta evitarlo?" />
+      <button className="btn btn-primary w-full" disabled={w === v.weight} onClick={() => onSend('me', 'vice.weight', { ...base, weight: w })}>Cambiar peso</button>
+      <div className="grid grid-cols-3 gap-2">
+        {SEVERITIES.map((s) => <button key={s} className={`btn text-sm ${severity === s ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setSeverity(s)}>{s}</button>)}
+      </div>
+      <button className="btn btn-ghost w-full" disabled={severity === v.severity} onClick={() => onSend('me', 'vice.severity', { ...base, severity })}>Cambiar gravedad</button>
+      <button className="btn btn-ghost w-full text-danger" onClick={() => onSend('me', 'vice.remove', base)}>Sacarlo</button>
+    </div>
+  )
+}
+
+function ObjectiveAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void }) {
+  const [title, setTitle] = useState('')
+  const [scope, setScope] = useState<Scope>('me')
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); void onSend(scope, 'objective.add', { title: title.trim() }) }} className="card mt-3 space-y-3">
+      <div><label className="label" htmlFor="ot">¿Qué querés lograr?</label><input id="ot" className="input" required maxLength={80} value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+      <ScopePicker value={scope} onChange={setScope} />
+      <div className="flex gap-2">
+        <button className="btn btn-primary flex-1" disabled={!title.trim()}>Proponer</button>
+        <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
+      </div>
+    </form>
   )
 }

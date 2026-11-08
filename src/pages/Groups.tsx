@@ -4,20 +4,23 @@ import { useAuth } from '../lib/auth'
 import { useGroups } from '../lib/groups'
 import { errorMessage } from '../lib/errors'
 import { timeAgo } from '../lib/date'
-import { areaStyle } from '../lib/areas'
-import type { FeedRow, GroupReview } from '../lib/types'
-import { TIER_LABEL } from '../lib/quiz'
+import { describeChange, type ChangeKind, type ChangeRequest, type Scope } from '../lib/changes'
+import { fmtCoins } from '../lib/day'
+import { CONFIG } from '../game/config'
 import EvidencePhoto from '../components/EvidencePhoto'
 import GroupChests from '../components/GroupChests'
-import { AreaIcon, ErrorBox, PageHeader, Spinner, Tier } from '../components/ui'
+import { ErrorBox, PageHeader, PillarTag, Spinner, Weight } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 
+interface Activity { at: string; kind: 'log' | 'change' | 'purchase'; user_id: string; username: string; text: string; detail: Record<string, unknown> }
+
+/** Feed del grupo: registros, cambios votados y compras (todo visible; lo privado, enmascarado). */
 function Feed({ groupId, me }: { groupId: string; me: string }) {
-  const [rows, setRows] = useState<FeedRow[] | null>(null)
+  const [rows, setRows] = useState<Activity[] | null>(null)
 
   const load = useCallback(async () => {
-    const { data } = await supabase.rpc('group_feed', { p_group: groupId, p_limit: 30 })
-    setRows((data as FeedRow[]) ?? [])
+    const { data } = await supabase.rpc('group_activity', { p_group: groupId, p_limit: 40 })
+    setRows((data as Activity[]) ?? [])
   }, [groupId])
 
   useEffect(() => {
@@ -33,23 +36,27 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
   if (rows.length === 0) return <p className="text-sm text-muted">Todavía no hay actividad.</p>
   return (
     <ul className="divide-y divide-line">
-      {rows.map((r) => {
-        const partial = r.target > 1 && r.count < r.target
+      {rows.map((r, i) => {
+        const who = r.user_id === me ? 'Vos' : r.username
+        const d = r.detail
         return (
-          <li key={r.log_id} className="flex items-center gap-3 py-2.5 text-sm">
-            <span className="text-lg" aria-hidden>{r.is_private && r.user_id !== me ? '🔒' : areaStyle(r.habit_area).icon}</span>
+          <li key={i} className="flex items-center gap-3 py-2.5 text-sm">
+            <span className="text-lg" aria-hidden>{r.kind === 'log' ? '✅' : r.kind === 'change' ? '🗳️' : '🛍️'}</span>
             <span className="min-w-0 flex-1">
-              <b className={r.user_id === me ? 'text-primary' : ''}>{r.user_id === me ? 'Vos' : r.username}</b>{' '}
-              <span className="text-ink">· {r.habit_name}</span>
-              {r.target > 1 && (
-                <span className={`block text-xs ${partial ? 'text-muted' : 'text-primary'}`}>
-                  {r.count.toLocaleString('es-ES')}/{r.target.toLocaleString('es-ES')} {r.unit}
+              <b className={r.user_id === me ? 'text-primary' : ''}>{who}</b>{' '}
+              {r.kind === 'log' && <span className="text-ink">· {r.text}{Number(d.count) > 1 && d.unit ? ` (${d.count} ${d.unit})` : ''}</span>}
+              {r.kind === 'change' && (
+                <span className="text-ink">
+                  · {describeChange({ kind: r.text as ChangeKind, payload: (d.payload ?? {}) as Record<string, unknown>, private: Boolean(d.private), scope: d.scope as Scope })}
+                  {' '}<span className={d.status === 'approved' ? 'text-alimentacion' : d.status === 'rejected' ? 'text-danger' : 'text-xp'}>
+                    ({d.status === 'approved' ? 'aprobado' : d.status === 'rejected' ? 'rechazado' : 'en votación'})
+                  </span>
                 </span>
               )}
+              {r.kind === 'purchase' && <span className="text-ink">· compró «{r.text}» ({fmtCoins(Number(d.price))} monedas)</span>}
             </span>
-            {r.photo_path && <EvidencePhoto path={r.photo_path} className="h-10 w-10" />}
-            <span className="font-bold text-xp">+{Math.round(Number(r.points))}</span>
-            <span className="w-16 text-right text-xs text-muted">{timeAgo(r.created_at)}</span>
+            {r.kind === 'log' && typeof d.photo_path === 'string' && <EvidencePhoto path={d.photo_path} className="h-10 w-10" />}
+            <span className="w-16 text-right text-xs text-muted">{timeAgo(r.at)}</span>
           </li>
         )
       })}
@@ -57,87 +64,94 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
   )
 }
 
-/** Hábitos propios de otros que esperan tu voto (≥ 50 % del resto del grupo aprueba). */
+/** Votaciones del grupo: quien propone no vota; aprueba con más de la mitad; vence en el plazo configurado. */
 function Reviews({ groupId, me }: { groupId: string; me: string }) {
-  const [rows, setRows] = useState<GroupReview[] | null>(null)
+  const [rows, setRows] = useState<ChangeRequest[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc('group_reviews', { p_group: groupId })
+    const { data, error } = await supabase.rpc('group_requests', { p_group: groupId })
     if (error) setError(errorMessage(error))
-    setRows((data as GroupReview[]) ?? [])
+    setRows((data as ChangeRequest[]) ?? [])
   }, [groupId])
   useEffect(() => { void load() }, [load])
 
-  async function vote(r: GroupReview, approve: boolean) {
-    setBusy(r.habit_id); setError(null)
-    const { error } = await supabase.rpc('vote_habit', { p_habit: r.habit_id, p_group: groupId, p_approve: approve })
+  async function vote(r: ChangeRequest, v: 'yes' | 'no') {
+    setBusy(r.id); setError(null)
+    const { error } = await supabase.rpc('vote_change', { p_request: r.id, p_vote: v })
     setBusy(null)
     if (error) setError(errorMessage(error))
     await load()
   }
 
-  if (!rows || rows.length === 0) return null
+  if (!rows) return null
   const pending = rows.filter((r) => r.status === 'pending')
-  const recent = rows.filter((r) => r.status !== 'pending')
-
   return (
     <section className="card mb-4">
       <h2 className="mb-1 font-semibold">
-        Hábitos propuestos {pending.length > 0 && <span className="ml-1 rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-bg">{pending.length}</span>}
+        🗳️ Votaciones {pending.length > 0 && <span className="ml-1 rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-bg">{pending.length}</span>}
       </h2>
-      <p className="mb-3 text-xs text-muted">Se aprueban con al menos la mitad del resto del grupo. Si se aprueban, suman también los días ya marcados.</p>
+      <p className="mb-3 text-xs text-muted">
+        Se aprueba con más de la mitad a favor y se rechaza con la mitad o más en contra. Si nadie vota en {CONFIG.voteWindowHours} h, se aprueba sola. Lo aprobado rige desde mañana.
+      </p>
       <ErrorBox>{error}</ErrorBox>
+      {pending.length === 0 && <p className="text-sm text-muted">No hay nada para votar.</p>}
       <ul className="space-y-3">
         {pending.map((r) => {
-          const mine = r.owner_id === me
-          const need = Math.ceil(r.others / 2)
+          const mine = r.proposer_id === me
+          const closes = Math.max(0, Math.round((Date.parse(r.closes_at) - Date.now()) / 3600000))
           return (
-            <li key={r.habit_id} className="rounded-2xl border border-line bg-surface-2/50 p-3">
-              <div className="flex items-start gap-3">
-                <AreaIcon area={r.area} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{r.habit_name}</p>
-                  {r.criterion && <p className="text-xs text-muted">{r.criterion}</p>}
-                  <p className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted">
-                    <span>de <b className="text-ink">{mine ? 'vos' : r.owner_username}</b></span>
-                    <Tier tier={r.tier} />
-                    {r.target > 1 && <span>meta {r.target} {r.unit}</span>}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    👍 {r.yes} · 👎 {r.no} · hacen falta {need} {need === 1 ? 'voto' : 'votos'} a favor de {r.others}
-                  </p>
-                </div>
-              </div>
+            <li key={r.id} className="rounded-2xl border border-line bg-surface-2/50 p-3">
+              <p className="font-semibold">{describeChange(r)}</p>
+              <p className="mt-1 text-xs text-muted">
+                de <b className="text-ink">{mine ? 'vos' : r.proposer}</b> · 👍 {r.yes} · 👎 {r.no} de {r.voters} · cierra en {closes} h
+              </p>
               {!mine && (
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button className={`btn ${r.my_vote === true ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.habit_id} onClick={() => vote(r, true)}>
-                    👍 Aprobar
-                  </button>
-                  <button className={`btn ${r.my_vote === false ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.habit_id} onClick={() => vote(r, false)}>
-                    👎 Rechazar
-                  </button>
+                  <button className={`btn ${r.my_vote === 'yes' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'yes')}>👍 A favor</button>
+                  <button className={`btn ${r.my_vote === 'no' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'no')}>👎 En contra</button>
                 </div>
               )}
             </li>
           )
         })}
       </ul>
-      {recent.length > 0 && (
-        <details className="mt-3">
-          <summary className="cursor-pointer text-xs font-semibold text-muted">Decididos esta semana ({recent.length})</summary>
-          <ul className="mt-2 space-y-1 text-sm">
-            {recent.map((r) => (
-              <li key={r.habit_id} className="flex justify-between gap-2">
-                <span className="truncate">{r.habit_name} <span className="text-muted">· {r.owner_id === me ? 'vos' : r.owner_username} · {TIER_LABEL[r.tier]}</span></span>
-                <span className={r.status === 'approved' ? 'text-alimentacion' : 'text-danger'}>{r.status === 'approved' ? 'Aprobado' : 'Rechazado'}</span>
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
     </section>
+  )
+}
+
+/** Pesos de todos (transparencia contra los pesos inflados). Privados y vicios sin nombre. */
+function FriendsPlans({ groupId, me }: { groupId: string; me: string }) {
+  const [rows, setRows] = useState<{ user_id: string; username: string; habits: { name: string; pillar: string | null; weight: number; target: number | null; unit: string | null }[]; vices: { name: string; weight: number; severity: string }[] }[]>([])
+  useEffect(() => {
+    supabase.rpc('group_plans', { p_group: groupId }).then(({ data }) => setRows((data as typeof rows) ?? []))
+  }, [groupId])
+  if (rows.length === 0) return null
+  return (
+    <details className="card mb-4">
+      <summary className="cursor-pointer font-semibold">⚖️ Pesos de cada uno</summary>
+      <div className="mt-3 space-y-4">
+        {rows.map((p) => (
+          <div key={p.user_id}>
+            <p className="mb-1 text-sm font-bold">{p.user_id === me ? 'Vos' : p.username}</p>
+            <ul className="space-y-1 text-sm">
+              {p.habits.map((h, i) => (
+                <li key={i} className="flex items-center justify-between gap-2">
+                  <span className="truncate"><PillarTag pillar={h.pillar} /> {h.name}{h.target != null ? ` (meta ${h.target} ${h.unit ?? ''})` : ''}</span>
+                  <Weight w={h.weight} />
+                </li>
+              ))}
+              {p.vices.map((v, i) => (
+                <li key={`v${i}`} className="flex items-center justify-between gap-2 text-muted">
+                  <span>🚫 {v.name} ({v.severity})</span><Weight w={v.weight} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </details>
   )
 }
 
@@ -222,6 +236,8 @@ export default function Groups() {
           </section>
 
           <Reviews groupId={selected.id} me={me} />
+
+          <FriendsPlans groupId={selected.id} me={me} />
 
           <GroupChests groupId={selected.id} me={me} />
 

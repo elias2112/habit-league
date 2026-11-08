@@ -6,7 +6,9 @@ PWA de hábitos para un grupo de amigos: check diario, XP, rachas y ranking del 
 
 ### 1. Supabase (plan gratuito)
 1. Crea un proyecto en [supabase.com](https://supabase.com).
-2. **SQL Editor** → pegá todo [supabase/schema.sql](supabase/schema.sql) → *Run*. Después, cada una en una consulta nueva y en este orden: [002](supabase/migrations/002_quiz_personas_puntos.sql), [003](supabase/migrations/003_grupo_objetivos_fotos.sql), [004](supabase/migrations/004_liga_juicio_cofre.sql) y [005](supabase/migrations/005_vicios.sql) → *Run*. Si después re-ejecutás una, re-ejecutá también las siguientes. La 003 también crea el bucket privado de fotos `evidencias` en Storage.
+2. **SQL Editor** → pegá todo [supabase/schema.sql](supabase/schema.sql) → *Run*. Después, cada una en una consulta nueva y en este orden: [002](supabase/migrations/002_quiz_personas_puntos.sql), [003](supabase/migrations/003_grupo_objetivos_fotos.sql), [004](supabase/migrations/004_liga_juicio_cofre.sql) y [005](supabase/migrations/005_vicios.sql), y [006](supabase/migrations/006_v3_plan_monedas.sql) → *Run*. Si después re-ejecutás una, re-ejecutá también las siguientes.
+   Antes de la 006, chequeá que nadie esté en más de un grupo (la 006 se frena sola si pasa):
+   `select user_id, count(*) from group_members group by user_id having count(*) > 1;` La 003 también crea el bucket privado de fotos `evidencias` en Storage.
 3. **Authentication → Sign In / Providers → Email**: para un grupo de amigos conviene **desactivar "Confirm email"**.
    El SMTP integrado de Supabase solo manda unos pocos correos por hora; con la confirmación activada,
    varios amigos registrándose a la vez pueden quedarse sin correo. (Alternativa: configurar un SMTP propio.)
@@ -50,7 +52,7 @@ Fuente del método: [discusión de Supabase #25977](https://github.com/orgs/supa
 | `npm run build` | Type-check + build de producción en `dist/` |
 | `npm test` | Tests del SQL (RLS, rachas, ranking, zonas horarias) sobre PGlite, sin Supabase |
 | `npm run icons` | Regenera los PNG de los iconos |
-| `npm run catalog` | Regenera los datos de las migraciones 003, 004 y 005 desde `content/` |
+| `npm run catalog` | Regenera los datos de las migraciones 003 a 006 desde `content/` (incluye `content/config.json`) |
 
 ## Hosting: GitHub Pages (gratis)
 La app se publica sola en `https://<usuario>.github.io/habit-league/` con cada push a `main`

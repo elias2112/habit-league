@@ -833,9 +833,12 @@ begin
            select 1 from plan_habits ph join habits h on h.id = ph.habit_id where ph.plan_id = pid and h.catalog_id = p ->> 'catalog_id') then
         continue;
       end if;
-      insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private)
+      -- Un hábito ligado a un cofre (goal_id, goal_step) solo se liga en el plan de quien lo propone.
+      insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private, goal_id, goal_step)
       values (u, coalesce(p ->> 'name', 'x'), p ->> 'catalog_id', p ->> 'pillar', p ->> 'criterion', p ->> 'unit',
-              coalesce((p ->> 'private')::boolean, false) and p ->> 'catalog_id' is not null and u = r.proposer_id)
+              coalesce((p ->> 'private')::boolean, false) and p ->> 'catalog_id' is not null and u = r.proposer_id,
+              case when u = r.proposer_id then nullif(p ->> 'goal_id', '')::uuid end,
+              coalesce(case when u = r.proposer_id then nullif(p ->> 'goal_step', '')::numeric end, 1))
       returning id into hid;
       insert into plan_habits (plan_id, habit_id, weight, target)
       values (pid, hid, w, coalesce(nullif(p ->> 'target', '')::numeric, (select case when target > 1 then target end from habits where id = hid)));
@@ -1119,7 +1122,7 @@ language sql stable security definer set search_path = public as $$
     where public.is_member(p_group) and l.user_id in (select user_id from group_members where group_id = p_group)
     union all
     select coalesce(r.decided_at, r.created_at), 'change', p.id, p.username, r.kind,
-           jsonb_build_object('status', r.status, 'scope', r.scope,
+           jsonb_build_object('status', r.status, 'scope', r.scope, 'private', r.private and p.id <> auth.uid(),
                               'payload', case when r.private and p.id <> auth.uid() then jsonb_build_object('weight', r.payload -> 'weight') else r.payload end)
     from change_requests r join profiles p on p.id = r.proposer_id
     where r.group_id = p_group and public.is_member(p_group)

@@ -11,7 +11,7 @@ import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Spinner } from '../co
 import GroupPicker from '../components/GroupPicker'
 import { MyRadar } from '../components/MyRadar'
 import LeagueTable from '../components/LeagueTable'
-import { fmtMult } from '../lib/vices'
+const fmtMult = (m: number) => `×${m.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`
 import { emblemUrl } from '../components/ArchetypeCard'
 
 const medal = ['🥇', '🥈', '🥉']
@@ -34,6 +34,7 @@ export default function Ranking() {
       setRows((data as LeaderboardRow[]).map((r) => ({
         ...r,
         total_points: Number(r.total_points),
+        legacy_points: Number(r.legacy_points ?? 0),
         max_points: Number(r.max_points),
         pct: r.pct == null ? null : Number(r.pct),
       })))
@@ -113,11 +114,12 @@ export default function Ranking() {
                     </span>
                     <span className="block truncate text-xs text-muted">{arch ? arch.name : `@${r.username}`}</span>
                   </span>
-                  {Number(r.multiplier) < 1 && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-xs font-bold text-danger" title="Multiplicador por vicios declarados">{fmtMult(Number(r.multiplier))}</span>}
+                  {Number(r.multiplier) < 1 && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-xs font-bold text-danger" title="Multiplicador de hoy por recaídas sin permiso">{fmtMult(Number(r.multiplier))}</span>}
                   <Flame n={r.streak} />
                   <span className="w-20 text-right">
                     <span className="block font-black tabular-nums text-xp">{Math.round(r.total_points)}</span>
                     <span className="block text-xs tabular-nums text-muted">{r.pct == null ? '—' : `${Math.round(r.pct)}%`}</span>
+                    {r.legacy_points > 0 && <span className="block text-[10px] tabular-nums text-muted" title="Puntos de los días anteriores al cambio de reglas, congelados como estaban">incl. {Math.round(r.legacy_points)} de legado</span>}
                   </span>
                 </button>
                 {open === r.user_id && (
@@ -132,7 +134,7 @@ export default function Ranking() {
         </ol>
       )}
       {tab === 'points' && <p className="mt-4 text-center text-xs text-muted">
-        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Los hábitos propios suman acá solo si este grupo los aprobó. Los vicios declarados multiplican los puntos (×0,9 cada uno) y los tropiezos restan del día. Tocá a alguien para ver su radar.
+        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Cada día suma hasta 100: lo que pasa de 100 va al pool de monedas, no al ranking. Las recaídas sin permiso multiplican el día. Los días anteriores al cambio de reglas quedan como estaban ("legado"). Tocá a alguien para ver su radar.
       </p>}
     </>
   )

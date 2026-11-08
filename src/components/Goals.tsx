@@ -11,13 +11,12 @@ import { AreaIcon, Bar, Empty, ErrorBox, Spinner, Tier } from './ui'
 const fmt = (n: number) => Math.round(n).toLocaleString('es-ES')
 
 function GoalForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
-  const { session, profile } = useAuth()
-  const me = session!.user.id
+  const { profile } = useAuth()
   const today = todayIn(profile?.timezone ?? 'Europe/Madrid')
   const [title, setTitle] = useState('')
-  const [kind, setKind] = useState<GoalKind>('general')
+  const [kind, setKind] = useState<GoalKind>('ahorro')
   const [touchedKind, setTouchedKind] = useState(false)
-  const [amount, setAmount] = useState(goalKind('general').default_amount)
+  const [amount, setAmount] = useState(goalKind('ahorro').default_amount)
   const [perItem, setPerItem] = useState(250)
   const [deadline, setDeadline] = useState('')
   const [busy, setBusy] = useState(false)
@@ -27,7 +26,7 @@ function GoalForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
   useEffect(() => {
     if (touchedKind) return
     const k = detectKind(title)
-    if (k !== kind) { setKind(k); setAmount(goalKind(k).default_amount) }
+    void k // los cofres son siempre de ahorro
   }, [title, touchedKind, kind])
 
   const t = goalKind(kind)
@@ -45,7 +44,10 @@ function GoalForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
         title: title.trim(), kind, target: plan.target, unit: plan.unit, deadline: deadline || null,
       }).select('id').single()
       if (e1) throw e1
-      const { error: e2 } = await supabase.from('habits').insert({ user_id: me, ...plan.habit, goal_id: g.id })
+      // El hábito del cofre entra al plan como cualquier cambio: se propone y rige desde mañana.
+      const { error: e2 } = await supabase.rpc('propose_change', { p_scope: 'me', p_kind: 'habit.add', p_payload: {
+        name: plan.habit.name, criterion: plan.habit.criterion, pillar: 'dinero', weight: Math.min(3, plan.habit.tier),
+        goal_id: g.id, goal_step: plan.habit.goal_step } })
       if (e2) throw e2
       onDone()
     } catch (err) {
@@ -58,13 +60,13 @@ function GoalForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
   return (
     <form onSubmit={submit} className="space-y-3">
       <div>
-        <label className="label" htmlFor="gtitle">¿Qué querés lograr?</label>
+        <label className="label" htmlFor="gtitle">¿Para qué querés ahorrar?</label>
         <input id="gtitle" className="input" maxLength={80} required placeholder="Ej.: Comprar un celular, leer un libro por semana…" value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
       <div>
         <span className="label">Tipo</span>
         <div className="grid grid-cols-2 gap-2">
-          {GOAL_KINDS.map((k) => (
+          {GOAL_KINDS.filter((k) => k.id === 'ahorro').map((k) => (
             <button
               type="button" key={k.id}
               onClick={() => { setTouchedKind(true); setKind(k.id); setAmount(k.default_amount) }}
@@ -106,7 +108,7 @@ function GoalForm({ onDone, onCancel }: { onDone: () => void; onCancel: () => vo
           </div>
           <p className="mt-2 text-xs text-muted">
             Meta: {fmt(plan.target)} {plan.unit} en {plan.days} {plan.days === 1 ? 'día' : 'días'} → {fmt(plan.daily)} {plan.unit} por día.
-            Es un hábito propio: tu grupo lo tiene que aprobar para que sume en el ranking (la barra del objetivo avanza igual).
+            Se propone a tu grupo y, si se aprueba, entra a tu plan desde mañana. La barra del cofre avanza con lo que marques. El cofre no se mezcla con las monedas del juego.
           </p>
         </div>
       )}
@@ -193,12 +195,12 @@ export default function Goals() {
       ) : (
         <button className="btn btn-primary mb-4 w-full" onClick={() => setCreating(true)}>+ Nuevo objetivo</button>
       )}
-      {goals.length === 0 && !creating && (
+      {goals.filter((g) => g.kind === 'ahorro').length === 0 && !creating && (
         <Empty>
-          Poné algo que quieras lograr (comprar algo, leer, escribir…) y te armamos el hábito diario con una barra de progreso.
+          Un cofre es plata real que juntás para algo (un celular, un viaje). Te armamos el hábito diario de ahorro y una barra. No se mezcla con las monedas del juego.
         </Empty>
       )}
-      <ul className="space-y-2">{goals.map((g) => <GoalCard key={g.id} g={g} onChange={load} />)}</ul>
+      <ul className="space-y-2">{goals.filter((g) => g.kind === 'ahorro').map((g) => <GoalCard key={g.id} g={g} onChange={load} />)}</ul>
       <p className="mt-4 text-xs text-muted">
         La barra suma lo que marcás en el hábito del objetivo (cada check de ahorro = la cuota diaria; páginas y palabras, lo que cargues) más lo que agregues a mano.
       </p>

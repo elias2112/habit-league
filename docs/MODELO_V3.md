@@ -1,6 +1,6 @@
-# Modelo de datos v3 — PROPUESTA (sin implementar, espera OK del dueño)
+# Modelo de datos v3 — IMPLEMENTADO (migración 006, con OK del dueño del 2026-11-08)
 
-Implementa `modifications/SPEC.md` (v3) con las respuestas del dueño del 2026-11-08. Nada de esto está migrado todavía.
+Implementa `modifications/SPEC.md` (v3) con las respuestas del dueño del 2026-11-08. Código: `supabase/migrations/006_v3_plan_monedas.sql`, `src/game/*`, pruebas en `tests/v3.test.ts`, `tests/reference/*` y `tests/game.handcalc.test.ts`.
 
 Principio rector: **en la base solo se guardan definiciones, fotos del plan y eventos crudos**. Puntos, multiplicadores, rachas, monedas y saldo se **recalculan** con funciones SQL que portan `reference/*.mjs`.
 
@@ -158,7 +158,18 @@ Criterios autodeclarados, sin afirmaciones de salud. Formato: nombre · peso sug
 
 "Un bloque de trabajo profundo de 45 min" (hoy en Foco) podría ir acá o en Mente; por la regla D va a Mente.
 
-## 13. Preguntas pendientes (P1–P8)
+## 13. Respuestas del dueño (2026-11-08) y cómo quedaron
+
+- **P1:** el plan del quiz rige desde hoy y sin votación (`create_initial_plan`).
+- **P2:** días anteriores a la migración congelados en `legacy_days`. **Elegido: sumados en el ranking con etiqueta** ("incl. X de legado"; `group_leaderboard.legacy_points`).
+- **P3:** los hábitos de Conexión salen del catálogo (quedan sin pilar) y los existentes se archivan con aviso (`user_notices`).
+- **P4:** "todo el grupo" agrega al plan de cada miembro; peso de quien propone para esa persona y `groupScopeDefaultWeight` (2) para los demás; rige desde el día siguiente de cada uno.
+- **P5:** pase, comodín y día libre: solo registro (se compran y salen en el feed; no cambian cálculos).
+- **P6 y P7:** propuesta en `docs/PROPUESTA_CONTENIDO_V3.md`, pendiente de revisión.
+- **P8:** cada persona toma su propio "día siguiente".
+- Hábitos de la sección 12: **no cargados**, pendientes de revisión.
+
+## 14. Preguntas originales (P1–P8)
 
 - **P1. Plan inicial:** el plan que sale del quiz, ¿rige desde **hoy** y **sin votación**? Si rige desde mañana, el primer día no se puede jugar.
 - **P2. Días pasados:** al pasar al cálculo nuevo, los días ya jugados se recalculan con la fórmula nueva, y el ranking histórico cambia (por ejemplo, el caso del orden de marcado o el ×0,9 permanente de los vicios). ¿Se acepta, o se congelan los totales de los días anteriores a la migración como "legado"? Congelar es guardar totales, que va contra la regla 4, pero solo para el pasado.

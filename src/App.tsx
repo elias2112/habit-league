@@ -10,6 +10,7 @@ import Ranking from './pages/Ranking'
 import Habits from './pages/Habits'
 import Groups from './pages/Groups'
 import Profile from './pages/Profile'
+import Store from './pages/Store'
 import { Spinner } from './components/ui'
 
 function Notice({ title, children }: { title: string; children: React.ReactNode }) {
@@ -62,6 +63,7 @@ function Routed() {
         <Route path="habitos" element={<Habits />} />
         <Route path="grupos" element={<Groups />} />
         <Route path="perfil" element={<Profile />} />
+        <Route path="tienda" element={<Store />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

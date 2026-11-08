@@ -90,3 +90,60 @@ export function Bar({ value, max, className = 'bg-xp' }: { value: number; max: n
     </div>
   )
 }
+
+// ───── Pilares (content/config.json) y peso ─────
+import { PILLARS, pillarById } from '../game/config'
+
+export function PillarIcon({ pillar, size = 'md' }: { pillar: string | null | undefined; size?: 'sm' | 'md' }) {
+  const p = pillarById(pillar)
+  return (
+    <span
+      className={`grid shrink-0 place-items-center rounded-xl border ${size === 'md' ? 'h-11 w-11 text-xl' : 'h-8 w-8 text-base'}`}
+      style={{ borderColor: (p?.color ?? '#2B3340') + '80', backgroundColor: (p?.color ?? '#2B3340') + '26' }}
+      aria-hidden
+    >
+      {p?.icon ?? '⭐'}
+    </span>
+  )
+}
+
+export function PillarTag({ pillar }: { pillar: string | null | undefined }) {
+  const p = pillarById(pillar)
+  return <span className="text-xs font-semibold" style={{ color: p?.color ?? 'var(--color-muted)' }}>{p ? `${p.icon} ${p.name}` : 'Sin pilar'}</span>
+}
+
+export function PillarSelect({ value, onChange, id }: { value: string; onChange: (v: string) => void; id?: string }) {
+  return (
+    <select id={id} className="input" value={value} onChange={(e) => onChange(e.target.value)}>
+      {PILLARS.map((p) => <option key={p.id} value={p.id}>{p.icon} {p.name}{p.provisional ? ' (provisional)' : ''}</option>)}
+    </select>
+  )
+}
+
+export const WEIGHT_LABEL: Record<number, string> = { 1: 'Me cuesta poco', 2: 'Me cuesta', 3: 'Me cuesta mucho' }
+
+/** Peso 1–3: dificultad personal ("¿cuánto te cuesta esto?"). */
+export function WeightPicker({ value, onChange, label = '¿Cuánto te cuesta esto?' }: { value: number; onChange: (w: number) => void; label?: string }) {
+  return (
+    <div>
+      <span className="label">{label}</span>
+      <div className="grid grid-cols-3 gap-2">
+        {[1, 2, 3].map((w) => (
+          <button type="button" key={w} onClick={() => onChange(w)} aria-pressed={value === w}
+            className={`btn px-2 text-sm ${value === w ? 'btn-primary' : 'btn-ghost'}`}>
+            {w} · {WEIGHT_LABEL[w]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function Weight({ w }: { w: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5 text-xs text-muted" title={`Peso ${w}: ${WEIGHT_LABEL[w]}`}>
+      {[1, 2, 3].map((i) => <span key={i} className={`h-1.5 w-3 rounded-full ${i <= w ? 'bg-xp' : 'bg-line'}`} />)}
+      <span className="ml-1">peso {w}</span>
+    </span>
+  )
+}

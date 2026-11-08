@@ -214,6 +214,17 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
     expect(rows.find((r) => r.user_id === B)!.eff).toBe((await h.admin<{ d: string }>(`select (user_today($1) + 1)::text d`, [B]))[0].d)
   })
 
+  it('un hábito propuesto ligado a un cofre suma al cofre de quien lo propuso', async () => {
+    await group(A)
+    await h.as(A, `select create_initial_plan($1::jsonb)`, [habits])
+    const [g] = await h.as<{ id: string }>(A, `insert into goals (title, kind, target, unit) values ('Celular', 'ahorro', 600, '€') returning id`)
+    await h.as(A, `select propose_change('me', 'habit.add', jsonb_build_object('name', 'Ahorrar 20 €', 'pillar', 'dinero', 'weight', 2, 'goal_id', $1::text, 'goal_step', 20))`, [g.id])
+    const [hb] = await h.admin<{ id: string; goal_step: string }>(`select id, goal_step from habits where goal_id = $1`, [g.id])
+    expect(Number(hb.goal_step)).toBe(20)
+    await h.admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2))`, [hb.id, A])
+    expect(Number((await h.as<{ progress: string }>(A, `select progress from goal_list($1)`, [A]))[0].progress)).toBe(20)
+  })
+
   it('un grupo por persona', async () => {
     await group(A)
     const [g2] = await h.as<{ invite_code: string }>(B, `select * from create_group('Otro', 30)`)

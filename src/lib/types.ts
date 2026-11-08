@@ -63,6 +63,7 @@ export interface LeaderboardRow {
   display_name: string | null
   archetype: string | null
   total_points: number
+  legacy_points: number
   max_points: number
   pct: number | null
   streak: number

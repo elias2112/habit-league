@@ -56,6 +56,8 @@ El video (5:30) muestra casi solo el **onboarding** de una app llamada "Life Res
 
 ## 5. Reglas de juego [PROPUESTA — todo editable]
 
+> **Reemplazado por la v3 (2026-11-08):** el puntaje diario, los pesos 1–3, los vicios en tres estados, las votaciones y las monedas siguen `modifications/SPEC.md` y `docs/MODELO_V3.md` (migración 006). Lo de abajo sobre dificultad 1–4, puntos guardados al marcar, vicios declarados (×0,9 permanente), tropiezos y aprobación por grupo quedó reemplazado; se conserva como historial.
+
 - Cada hábito tiene una **dificultad (tier 1, 2 o 3; 4 = Muy difícil, solo hábitos propios)**. Los puntos de un hábito = `100 × tier / suma de tiers de los hábitos activos del usuario`.
 - **Normalización:** cada usuario suma como máximo **100 puntos por día**, sin importar su arquetipo ni cuántos hábitos tenga. La base de datos aplica el tope (migración `002`).
 - Un hábito se marca **una vez por día**, solo el día de hoy según la zona horaria del usuario.
