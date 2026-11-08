@@ -69,3 +69,40 @@ replaceBlock('supabase/migrations/005_vicios.sql', 'VICES', [
   'on conflict (key) do update set value = excluded.value;',
 ].join('\n'))
 console.log(`✓ ${vj.vices.length} vicios → 005`)
+
+// ── 006: configuración v3, catálogo con pilares y tienda
+const M6 = 'supabase/migrations/006_v3_plan_monedas.sql'
+const cfg = JSON.parse(readFileSync('content/config.json', 'utf8'))
+const flat = {
+  severity: cfg.scoring.severity,
+  multiplierFloor: cfg.scoring.multiplierFloor,
+  maxCompletion: cfg.scoring.maxCompletion,
+  ...cfg.coins, ...cfg.time, ...cfg.rules,
+  pillars: cfg.pillars,
+  areaToPillar: cfg.areaToPillar,
+}
+const jl = (v) => `'${JSON.stringify(v).replaceAll("'", "''")}'::jsonb`
+replaceBlock(M6, 'CONFIG3', [
+  'insert into public.game_config (key, value) values',
+  Object.entries(flat).map(([k, v]) => `  (${q(k)}, ${jl(v)})`).join(',\n'),
+  'on conflict (key) do update set value = excluded.value;',
+].join('\n'))
+console.log(`✓ ${Object.keys(flat).length} parámetros → 006`)
+
+// Pilar de cada hábito del catálogo según areaToPillar; sin pilar (Conexión) = fuera del catálogo nuevo.
+replaceBlock(M6, 'CATALOG3', habits.map((h) =>
+  `update public.catalog_habits set pillar = ${q(cfg.areaToPillar[h.area] ?? null)} where id = ${q(h.id)};`).join('\n'))
+console.log(`✓ pilares de ${habits.length} hábitos → 006 (${habits.filter((h) => !cfg.areaToPillar[h.area]).length} quedan fuera)`)
+
+const store = JSON.parse(readFileSync('content/store.json', 'utf8'))
+const arr = (a) => `array[${(a ?? []).map(q).join(', ')}]::text[]`
+replaceBlock(M6, 'STORE', [
+  'insert into public.store_catalog (slug, name, kind, price, price_by_weight, weekly_limit, opt_in, conflicts_with, per_objective, price_source) values',
+  store.items.map((i) => `  (${[q(i.id), q(i.name), q(i.kind), q(i.price ?? null), i.priceByWeight ? jl(i.priceByWeight) : 'null',
+    q(i.weeklyLimit ?? null), q(Boolean(i.optIn)), arr(i.conflictsWith), q(Boolean(i.perObjective)),
+    q(i.priceSource === 'dueño' ? 'dueño' : 'sugerencia')].join(', ')})`).join(',\n'),
+  'on conflict (slug) do update set name = excluded.name, kind = excluded.kind, price = excluded.price,',
+  '  price_by_weight = excluded.price_by_weight, weekly_limit = excluded.weekly_limit, opt_in = excluded.opt_in,',
+  '  conflicts_with = excluded.conflicts_with, per_objective = excluded.per_objective, price_source = excluded.price_source;',
+].join('\n'))
+console.log(`✓ ${store.items.length} artículos de tienda → 006`)

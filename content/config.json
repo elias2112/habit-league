@@ -1,0 +1,47 @@
+{
+  "version": "3.0",
+  "note": "ÚNICO lugar de parámetros del juego (spec v3, reference/config.mjs). La app lo importa y `npm run catalog` lo copia a la base (game_config). El grupo puede cambiar valores por votación (group_config). [dueño] = lo dijo el dueño; [propuesta] = valor a calibrar con el testing.",
+  "scoring": {
+    "severity": { "leve": 0.95, "normal": 0.9, "grave": 0.8 },
+    "multiplierFloor": 0.7,
+    "maxCompletion": 1.5
+  },
+  "coins": {
+    "coinsAt75": 2,
+    "coinsAt100": 4,
+    "coinThresholdLow": 75,
+    "coinThresholdHigh": 100,
+    "overflowRate": 0.1,
+    "streakStepDays": 7,
+    "streakStepBonus": 0.1,
+    "unpaidSlipStepsLost": 1
+  },
+  "time": {
+    "dayCutoffHour": 0,
+    "weekStartsOn": "monday",
+    "poolClosesAt": "sunday 23:59",
+    "voteWindowHours": 24
+  },
+  "rules": {
+    "permitResetsCleanStreak": true,
+    "minActiveHabits": 3,
+    "maxObjectives": 3,
+    "groupScopeDefaultWeight": 2
+  },
+  "pillars": [
+    { "id": "cuerpo", "name": "Cuerpo", "icon": "💪", "color": "#FF6B6B" },
+    { "id": "mente", "name": "Mente", "icon": "🧠", "color": "#B4A8FF" },
+    { "id": "dinero", "name": "Dinero", "icon": "💰", "color": "#7BD88F" },
+    { "id": "habilidades", "name": "Habilidades", "icon": "🛠️", "color": "#5AA9FF" },
+    { "id": "creatividad", "name": "Creatividad", "icon": "🎨", "color": "#FF8FD0" },
+    { "id": "carrera", "name": "Carrera y estudios", "icon": "🎓", "color": "#4FD1C5", "provisional": true }
+  ],
+  "areaToPillar": {
+    "cuerpo": "cuerpo",
+    "sueno": "cuerpo",
+    "alimentacion": "cuerpo",
+    "mente": "mente",
+    "foco": "mente",
+    "social": null
+  }
+}

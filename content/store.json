@@ -1,0 +1,20 @@
+{
+  "version": "0.1",
+  "note": "Catálogo inicial. 1 moneda = 1 euro como referencia. Solo cerveza y trago tienen precio dicho por el dueño; el resto son sugerencias a probar. Todo se cambia por votación del grupo.",
+  "items": [
+    { "id": "cerveza", "name": "Una cerveza", "kind": "permit", "optIn": true, "price": 5, "weeklyLimit": 6, "priceSource": "dueño", "limitNote": "6 es el ejemplo del dueño; se asumió por semana" },
+    { "id": "trago", "name": "Un trago", "kind": "permit", "optIn": true, "price": 12, "weeklyLimit": null, "priceSource": "dueño" },
+    { "id": "cigarro", "name": "Un cigarro", "kind": "permit", "optIn": true, "price": 3, "weeklyLimit": null, "conflictsWith": ["dejar-fumar"], "priceSource": "sugerencia", "priceNote": "a mano: un cigarro suelto vale mucho menos que una cerveza en la vida real" },
+    { "id": "comer-mal", "name": "Comer mal (una comida)", "kind": "permit", "optIn": true, "price": 10, "weeklyLimit": null, "priceSource": "sugerencia" },
+    { "id": "antojo-dulce", "name": "Un antojo dulce", "kind": "permit", "optIn": true, "price": 3, "weeklyLimit": null, "priceSource": "sugerencia" },
+    { "id": "cafe-afuera", "name": "Café o desayuno afuera", "kind": "reward", "price": 3, "weeklyLimit": null, "priceSource": "real aproximado, no verificado" },
+    { "id": "cine", "name": "Cine", "kind": "reward", "price": 10, "weeklyLimit": null, "priceSource": "real aproximado, no verificado" },
+    { "id": "libro", "name": "Un libro nuevo", "kind": "reward", "price": 15, "weeklyLimit": null, "priceSource": "real aproximado, no verificado" },
+    { "id": "cena-afuera", "name": "Cena afuera", "kind": "reward", "price": 25, "weeklyLimit": null, "priceSource": "real aproximado, no verificado" },
+    { "id": "plan-del-grupo", "name": "Elegir el plan del grupo", "kind": "reward", "price": 6, "weeklyLimit": null, "priceSource": "sugerencia" },
+    { "id": "pase-habito", "name": "Pase de un hábito (un día)", "kind": "reward", "price": null, "priceByWeight": { "1": 2, "2": 4, "3": 6 }, "weeklyLimit": null, "priceSource": "sugerencia" },
+    { "id": "comodin-racha", "name": "Comodín de racha (protege el multiplicador una vez)", "kind": "reward", "price": 10, "weeklyLimit": null, "priceSource": "sugerencia" },
+    { "id": "dia-libre-objetivo", "name": "Día libre de un objetivo", "kind": "reward", "price": 8, "weeklyLimit": null, "priceSource": "sugerencia", "perObjective": true },
+    { "id": "premio-grande", "name": "Premio grande propio", "kind": "reward", "price": null, "weeklyLimit": null, "priceSource": "lo define quien lo propone (precio real) y lo vota el grupo" }
+  ]
+}

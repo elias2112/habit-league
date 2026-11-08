@@ -9,6 +9,7 @@ const FILES = [
   '../supabase/migrations/003_grupo_objetivos_fotos.sql',
   '../supabase/migrations/004_liga_juicio_cofre.sql',
   '../supabase/migrations/005_vicios.sql',
+  '../supabase/migrations/006_v3_plan_monedas.sql',
 ]
 const STUB = `
 create role anon nologin;
@@ -51,6 +52,9 @@ beforeEach(async () => {
 /** Hábito de catálogo tier 1 para tener puntos (único hábito → 100 puntos al completarlo). */
 async function oneHabit(user: string) {
   const [h] = await as<{ id: string }>(user, `insert into habits (user_id, name, catalog_id) values ($1, 'x', 'caminar_30') returning id`, [user])
+  // Modelo v3: un hábito puntúa si está en la foto del plan; acá, un plan que rige desde siempre.
+  await admin(`insert into plans (user_id, effective_from) values ($1, '2000-01-01') on conflict do nothing`, [user])
+  await admin(`insert into plan_habits (plan_id, habit_id, weight) select id, $2, 1 from plans where user_id = $1 and effective_from = '2000-01-01'`, [user, h.id])
   return h.id
 }
 /** Marca el hábito en días pasados (relativos a hoy del usuario), como admin. */

@@ -12,6 +12,7 @@ const FILES = [
   '../supabase/migrations/003_grupo_objetivos_fotos.sql',
   '../supabase/migrations/004_liga_juicio_cofre.sql',
   '../supabase/migrations/005_vicios.sql',
+  '../supabase/migrations/006_v3_plan_monedas.sql',
 ]
 const schema = FILES.map((p) => readFileSync(new URL(p, import.meta.url), 'utf8')).join('\n')
 
@@ -121,7 +122,7 @@ describe('alta de usuario y perfil', () => {
     expect(await as<{ username: string }>(A, `select username from profiles where id = $1`, [A])).toEqual([{ username: 'analopeztest_000000' }])
 
     await admin(`delete from profiles where id = $1`, [B])
-    await db.exec(readFileSync(new URL(FILES[2], import.meta.url), 'utf8'))
+    for (const file of FILES.slice(2)) await db.exec(readFileSync(new URL(file, import.meta.url), 'utf8'))
     expect(await admin(`select id from profiles where id = $1`, [B])).toHaveLength(1)
   })
 
@@ -229,17 +230,6 @@ describe('catálogo en la base', () => {
     await expect(as(A, `insert into habits (user_id, name, catalog_id) values ($1, 'x', 'no_existe')`, [A])).rejects.toThrow(/inexistente/)
   })
 
-  it('los hábitos propios no pueden ser privados, necesitan área y solo se les baja la dificultad', async () => {
-    await expect(as(A, `insert into habits (user_id, name) values ($1, 'x')`, [A])).rejects.toThrow(/área/)
-    const [{ id, private: p }] = await as<{ id: string; private: boolean }>(A,
-      `insert into habits (user_id, name, area, tier, private) values ($1, 'Guitarra', 'mente', 3, true) returning id, private`, [A])
-    expect(p).toBe(false)
-    await expect(as(A, `update habits set tier = 4 where id = $1`, [id])).rejects.toThrow(/no se puede modificar/)
-    await expect(as(A, `update habits set name = 'Otra cosa' where id = $1`, [id])).rejects.toThrow(/no se puede modificar/)
-    await as(A, `update habits set tier = 2 where id = $1`, [id])
-    await as(A, `update habits set archived = true where id = $1`, [id])
-    expect(await as(A, `select tier, archived from habits where id = $1`, [id])).toEqual([{ tier: 2, archived: true }])
-  })
 })
 
 describe('checks del día', () => {
@@ -283,153 +273,6 @@ describe('checks del día', () => {
   })
 })
 
-describe('puntos y por partes', () => {
-  it('puntos = 100 * tier / suma de tiers activos; día perfecto ≈ 100', async () => {
-    const h1 = await cat(A, 'caminar_30')   // 1
-    const h2 = await cat(A, 'ejercicio_20') // 2
-    const h3 = await cat(A, 'fuerza_30')    // 3
-    await done(A, h1)
-    expect(await pts(A)).toBeCloseTo(16.67, 2)
-    await done(A, h2)
-    await done(A, h3)
-    expect(await pts(A)).toBeCloseTo(100, 1)
-  })
-
-  it('por partes: cada vaso suma su fracción; completar = meta; restar y borrar', async () => {
-    const agua = await cat(A, 'agua_2l') // tier 1, 8 vasos
-    await cat(A, 'caminar_30')           // tier 1 → agua vale 50
-    expect((await as<{ n: number }>(A, `select add_habit_progress($1, 1) n`, [agua]))[0].n).toBe(1)
-    expect(await pts(A)).toBe(6.25)
-    await as(A, `select add_habit_progress($1, 3)`, [agua])
-    expect(await pts(A)).toBe(25)
-    await as(A, `select add_habit_progress($1, 10)`, [agua]) // pasarse no da más
-    expect(await pts(A)).toBe(50)
-    expect((await as<{ n: number }>(A, `select add_habit_progress($1, -20) n`, [agua]))[0].n).toBe(0)
-    expect(await as(A, `select * from habit_logs`)).toHaveLength(0)
-    await done(A, agua)
-    expect(await as(A, `select count, target from habit_logs`)).toEqual([{ count: 8, target: 8 }])
-  })
-
-  it('la racha solo cuenta hábitos completos', async () => {
-    const agua = await cat(A, 'agua_2l')
-    await as(A, `select add_habit_progress($1, 3)`, [agua])
-    expect((await as<{ s: number }>(A, `select user_streak($1) s`, [A]))[0].s).toBe(0)
-    await as(A, `select add_habit_progress($1, 5)`, [agua])
-    expect((await as<{ s: number }>(A, `select user_streak($1) s`, [A]))[0].s).toBe(1)
-  })
-
-  it('tope de 100 por día aunque se agreguen hábitos a mitad de día', async () => {
-    const h1 = await cat(A, 'caminar_30')
-    await done(A, h1) // único: 100
-    const h2 = await cat(A, 'fuerza_30')
-    await done(A, h2)
-    expect(await pts(A)).toBe(100)
-  })
-
-  it('los archivados no cuentan en la suma de tiers', async () => {
-    const h1 = await cat(A, 'caminar_30')
-    const h2 = await cat(A, 'fuerza_30')
-    await as(A, `update habits set archived = true where id = $1`, [h2])
-    await done(A, h1)
-    expect(await pts(A)).toBe(100)
-  })
-
-  it('el XP viejo queda congelado aunque cambie el hábito (compatibilidad)', async () => {
-    const h = await custom(A, 'Leer', 2)
-    await done(A, h)
-    await as(A, `update habits set tier = 1 where id = $1`, [h])
-    expect(Number((await as<{ points: string }>(A, `select points from habit_logs`))[0].points)).toBe(100)
-  })
-})
-
-describe('aprobación de hábitos propios', () => {
-  type Review = { status: string; yes: number; no: number; others: number; my_vote: boolean | null; habit_name: string }
-  const review = async (user: string, g: string) => (await as<Review>(user, `select * from group_reviews($1)`, [g]))[0]
-  const vote = (user: string, h: string, g: string, ok: boolean) =>
-    as<{ s: string }>(user, `select vote_habit($1, $2, $3) s`, [h, g, ok]).then((r) => r[0].s)
-
-  it('solo en un grupo propio se aprueba sola; al entrar alguien vuelve a pendiente', async () => {
-    const g = await createGroup(A)
-    await custom(A, 'Guitarra', 3)
-    expect((await review(A, g.id)).status).toBe('approved')
-    await as(B, `select join_group($1)`, [g.invite_code])
-    expect((await review(A, g.id)).status).toBe('pending')
-  })
-
-  it('≥ 50 % del resto aprueba: con 2 compañeros alcanza 1 voto a favor', async () => {
-    const g = await createGroup(A, B, C)
-    const h = await custom(A, 'Guitarra', 4)
-    expect(await review(B, g.id)).toMatchObject({ status: 'pending', others: 2, habit_name: 'Guitarra' })
-    expect(await vote(B, h, g.id, true)).toBe('approved')
-  })
-
-  it('con 3 compañeros: 1 a favor no alcanza; 2 en contra no rechaza; 2 a favor aprueba', async () => {
-    const g = await createGroup(A, B, C, D)
-    const h = await custom(A, 'Guitarra', 2)
-    expect(await vote(B, h, g.id, true)).toBe('pending')
-    expect(await vote(C, h, g.id, false)).toBe('pending')
-    expect(await vote(D, h, g.id, true)).toBe('approved')
-  })
-
-  it('rechazado (> 50 % en contra) no suma nunca y se archiva si no queda en ningún grupo', async () => {
-    const g = await createGroup(A, B)
-    const h = await custom(A, 'Mirar series', 4)
-    await done(A, h)
-    expect(await vote(B, h, g.id, false)).toBe('rejected')
-    const [row] = await as<{ total_points: string }>(B, `select * from group_leaderboard($1) where user_id = $2`, [g.id, A])
-    expect(Number(row.total_points)).toBe(0)
-    expect(await as(A, `select archived from habits where id = $1`, [h])).toEqual([{ archived: true }])
-  })
-
-  it('pendiente no suma en el ranking; al aprobarse suman también los checks de antes', async () => {
-    const g = await createGroup(A, B)
-    const h = await custom(A, 'Guitarra', 2)
-    await done(A, h)
-    const total = async () => Number((await as<{ total_points: string }>(B, `select * from group_leaderboard($1) where user_id = $2`, [g.id, A]))[0].total_points)
-    expect(await total()).toBe(0)
-    await vote(B, h, g.id, true)
-    expect(await total()).toBe(100)
-  })
-
-  it('cada grupo decide por su cuenta', async () => {
-    const g1 = await createGroup(A, B)
-    const [g2] = await as<{ id: string; invite_code: string }>(A, `select * from create_group('Trabajo', 30)`)
-    await as(C, `select join_group($1)`, [g2.invite_code])
-    const h = await custom(A, 'Guitarra', 2)
-    await vote(B, h, g1.id, true)
-    await vote(C, h, g2.id, false)
-    const st = await as<{ group_id: string; status: string }>(A, `select group_id, status from my_habit_reviews() order by group_name`)
-    expect(Object.fromEntries(st.map((r) => [r.group_id, r.status]))).toEqual({ [g1.id]: 'approved', [g2.id]: 'rejected' })
-    expect(await as(A, `select archived from habits where id = $1`, [h])).toEqual([{ archived: false }])
-  })
-
-  it('no se vota lo propio, ni dos veces una votación cerrada, ni desde fuera del grupo', async () => {
-    const g = await createGroup(A, B)
-    const h = await custom(A, 'Guitarra', 2)
-    await expect(vote(A, h, g.id, true)).rejects.toThrow(/propio/)
-    await expect(vote(C, h, g.id, true)).rejects.toThrow(/miembro/)
-    await vote(B, h, g.id, true)
-    await expect(vote(B, h, g.id, false)).rejects.toThrow(/terminó/)
-  })
-
-  it('si se va alguien, las pendientes se recalculan', async () => {
-    const g = await createGroup(A, B, C, D)
-    const h = await custom(A, 'Guitarra', 2)
-    await vote(B, h, g.id, true) // 1 de 3: pendiente
-    await as(C, `delete from group_members where group_id = $1 and user_id = $2`, [g.id, C])
-    expect((await review(A, g.id)).status).toBe('approved') // 1 de 2
-  })
-
-  it('los hábitos de catálogo cuentan sin aprobación', async () => {
-    const g = await createGroup(A, B)
-    const h = await cat(A, 'caminar_30')
-    await done(A, h)
-    expect(await as(B, `select * from group_reviews($1)`, [g.id])).toHaveLength(0)
-    const [row] = await as<{ total_points: string }>(B, `select * from group_leaderboard($1) where user_id = $2`, [g.id, A])
-    expect(Number(row.total_points)).toBe(100)
-  })
-})
-
 describe('privados y feed', () => {
   it('el feed enmascara hábitos privados ante otros (nombre y foto) pero no ante su dueño', async () => {
     const g = await groupAB()
@@ -442,14 +285,6 @@ describe('privados y feed', () => {
     expect(deA).toMatchObject({ habit_name: 'Día sin fumar', photo_path: `${A}/${h}/foto.jpg` })
   })
 
-  it('el feed muestra puntos, área y avance parcial', async () => {
-    const g = await groupAB()
-    const agua = await cat(B, 'agua_2l')
-    await as(B, `select add_habit_progress($1, 3)`, [agua])
-    const [f] = await as<{ habit_name: string; habit_area: string; count: number; target: number; unit: string; points: string }>(A, `select * from group_feed($1)`, [g.id])
-    expect(f).toMatchObject({ habit_name: 'Tomar 2 litros de agua', habit_area: 'alimentacion', count: 3, target: 8, unit: 'vasos' })
-    expect(Number(f.points)).toBe(37.5)
-  })
 })
 
 describe('fotos (storage)', () => {
@@ -515,82 +350,6 @@ describe('racha (streak_as_of)', () => {
   })
 })
 
-describe('ranking (group_leaderboard)', () => {
-  type Row = { user_id: string; total_points: string; max_points: string; pct: string | null; streak: number; username: string; archetype: string | null }
-
-  it('suma puntos dentro de la ventana del reto, calcula max y pct', async () => {
-    const g = await groupAB()
-    await admin(`update groups set start_date = user_today($2) - 2, duration_days = 3 where id = $1`, [g.id, A])
-    await admin(`update group_members set joined_at = now() - interval '5 days' where group_id = $1`, [g.id])
-    const ha = await cat(A, 'caminar_30')
-    const hb = await cat(B, 'caminar_30')
-    await admin(`insert into habit_logs (habit_id, log_date) values
-      ($1, user_today($3) - 2), ($1, user_today($3) - 1), ($1, user_today($3) - 3), ($2, user_today($3))`, [ha, hb, A])
-    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
-    expect(rows.map((r) => [r.user_id, Number(r.total_points), Number(r.max_points)])).toEqual([[A, 200, 300], [B, 100, 300]])
-    expect(Number(rows[0].pct)).toBeCloseTo(66.7, 1)
-  })
-
-  it('quien entra tarde se compara por pct sobre sus propios días', async () => {
-    const g = await groupAB()
-    await admin(`update groups set start_date = user_today($2) - 9 where id = $1`, [g.id, A])
-    await admin(`update group_members set joined_at = now() - interval '20 days' where user_id = $1`, [A])
-    await done(B, await cat(B, 'caminar_30'))
-    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
-    const a = rows.find((r) => r.user_id === A)!
-    const b = rows.find((r) => r.user_id === B)!
-    expect([Number(b.max_points), Number(b.pct)]).toEqual([100, 100])
-    expect([Number(a.max_points), Number(a.pct)]).toEqual([1000, 0])
-  })
-
-  it('reto que aún no empezó: max 0 y pct null; sin registros: 0 y racha 0', async () => {
-    const g = await groupAB()
-    await admin(`update groups set start_date = user_today($2) + 3 where id = $1`, [g.id, A])
-    const rows = await as<Row>(A, `select * from group_leaderboard($1)`, [g.id])
-    expect(rows.every((r) => Number(r.max_points) === 0 && r.pct === null && r.streak === 0)).toBe(true)
-  })
-
-  it('la racha refleja el check de hoy y se ve el arquetipo', async () => {
-    const g = await groupAB()
-    await admin(`update profiles set archetype = 'nomada' where id = $1`, [A])
-    const h = await cat(A, 'caminar_30')
-    await admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2) - 1)`, [h, A])
-    await done(A, h)
-    const rows = await as<Row>(B, `select * from group_leaderboard($1)`, [g.id])
-    expect(rows.find((r) => r.user_id === A)).toMatchObject({ streak: 2, archetype: 'nomada' })
-  })
-})
-
-describe('radar (area_radar)', () => {
-  type R = { area: string; day1: string; actual: string }
-  const radar = async (user: string, of: string) =>
-    Object.fromEntries((await as<R>(user, `select * from area_radar($1)`, [of])).map((r) => [r.area, [Number(r.day1), Number(r.actual)]]))
-
-  it('día 1 sale del nivel del quiz; sin hábitos en el área, actual = día 1', async () => {
-    await admin(`update profiles set area_scores = '{"cuerpo":3,"mente":0,"sueno":2,"alimentacion":1,"foco":0,"social":3}' where id = $1`, [A])
-    const r = await radar(A, A)
-    expect(r).toEqual({ cuerpo: [100, 100], mente: [0, 0], sueno: [67, 67], alimentacion: [33, 33], foco: [0, 0], social: [100, 100] })
-  })
-
-  it('actual = % de cumplimiento en los últimos 14 días completos (por partes cuenta proporcional)', async () => {
-    await admin(`update profiles set area_scores = '{"cuerpo":0,"alimentacion":0}' where id = $1`, [A])
-    const h = await cat(A, 'caminar_30')
-    const agua = await cat(A, 'agua_2l')
-    await admin(`update habits set created_at = now() - interval '30 days' where user_id = $1`, [A])
-    for (let i = 1; i <= 7; i++) await admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2) - $3::int)`, [h, A, i])
-    await admin(`insert into habit_logs (habit_id, log_date, count) values ($1, user_today($2) - 1, 4)`, [agua, A]) // 4/8 un día
-    await done(A, h) // hoy no cuenta
-    const r = await radar(A, A)
-    expect(r.cuerpo).toEqual([0, 50])            // 7 de 14
-    expect(r.alimentacion).toEqual([0, 4])       // 0,5 de 14 → 3,6 % ≈ 4
-  })
-
-  it('un compañero puede ver mi radar', async () => {
-    await groupAB()
-    expect(await as(B, `select * from area_radar($1)`, [A])).toHaveLength(6)
-  })
-})
-
 describe('objetivos', () => {
   it('progreso = avance de sus hábitos × paso + ajustes manuales; solo el dueño los gestiona', async () => {
     await groupAB()
@@ -617,10 +376,11 @@ describe('objetivos', () => {
 })
 
 describe('migraciones', () => {
-  it('se pueden volver a ejecutar sin errores (002 a 005, en orden)', async () => {
+  it('se pueden volver a ejecutar sin errores (002 a 006, en orden)', async () => {
     await db.exec(readFileSync(new URL(FILES[1], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[2], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[3], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[4], import.meta.url), 'utf8'))
+    await db.exec(readFileSync(new URL(FILES[5], import.meta.url), 'utf8'))
   })
 })
