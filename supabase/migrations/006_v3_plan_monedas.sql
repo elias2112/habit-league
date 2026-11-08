@@ -7,7 +7,7 @@
 -- monedas y saldo se RECALCULAN. Excepción acordada: los días anteriores a esta migración quedan
 -- congelados como "legado" (legacy_days) con los puntos que tenían.
 
--- ───────────── 0. Guarda: un grupo por persona ─────────────
+-- ───────────── 0. Guada: un grupo por persona ─────────────
 do $$
 declare n int; who text;
 begin
