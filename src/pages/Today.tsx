@@ -103,6 +103,13 @@ export default function Today() {
         </div>
       ))}
 
+      {day.has_plan && !day.habits.some((h) => h.block === 'fuerza') && (
+        <div className="mb-3 rounded-xl border border-primary/50 bg-primary/10 px-3 py-2 text-sm">
+          <b>Hay una versión nueva del juego</b> (niveles, fuerza base, objetivos). Para jugarla, empezá de cero desde{' '}
+          <Link to="/perfil" className="font-semibold text-primary underline">Perfil → Cuenta</Link>. Tu progreso actual vuelve a cero.
+        </div>
+      )}
+
       {tzMismatch && (
         <p className="mb-4 rounded-xl border border-xp/40 bg-xp/10 px-3 py-2 text-sm text-xp">
           Tu perfil usa la zona <b>{profile.timezone}</b> y este dispositivo está en <b>{deviceTz}</b>. <Link to="/perfil" className="underline">Cambiar</Link>

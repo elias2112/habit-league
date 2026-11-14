@@ -54,10 +54,7 @@ Están en `content/onboarding.json`, marcado **BORRADOR**. La app ya los usa en 
 **5. ¿Qué deporte o actividad física vas a hacer?**
 - Texto libre, meta opcional (número + unidad) y "¿Cuánto te cuesta?".
 
-**Hábitos generales sugeridos (propuesta):**
-- Los fáciles de Cuerpo y Mente del catálogo, alternados.
-- La cantidad la da el arquetipo (3 a 5); no se limita el total.
-- Se suman los que sugieren las preguntas directas.
+**Hábitos generales por defecto (pedido del dueño):** Hacer la cama y Meditar ("Respirar o meditar 5 minutos"), más los que sugieren las preguntas directas. Las flexiones, sentadillas y dominadas van en la fuerza base, para todos.
 
 ## Para decidir
 1. ¿"Leer" va en Mente o en Habilidades?

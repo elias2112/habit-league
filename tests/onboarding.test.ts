@@ -46,9 +46,8 @@ describe('objetivos del cuestionario', () => {
     }
   })
 
-  it('sugerencias generales: fáciles de Cuerpo y Mente, alternadas, sin repetir lo que ya está', () => {
-    const g = suggestGeneral(4, new Set(['caminar_30']))
-    expect(g.map((x) => x.pillar)).toEqual(['cuerpo', 'mente', 'cuerpo', 'mente'])
-    expect(g.map((x) => x.catalog_id)).not.toContain('caminar_30')
+  it('generales por defecto: Hacer la cama y Meditar (sin repetir lo que ya está)', () => {
+    expect(suggestGeneral().map((x) => x.name)).toEqual(['Hacer la cama', 'Respirar o meditar 5 minutos'])
+    expect(suggestGeneral(new Set(['hacer_cama'])).map((x) => x.catalog_id)).toEqual(['respirar_5'])
   })
 })

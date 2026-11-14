@@ -2,7 +2,7 @@
 // Los cálculos de cada objetivo reutilizan las plantillas de content/goals.json (planGoal), sin fórmulas nuevas.
 import content from '../../content/onboarding.json'
 import { planGoal, type GoalKind } from './goals'
-import { CATALOG, catalogById } from './quiz'
+import { catalogById } from './quiz'
 import { catalogPillar } from '../components/CatalogPicker'
 
 export interface ObjectiveQuestion { id: string; type: 'text' | 'number' | 'date' | 'pillar'; text: string; unit?: string; placeholder?: string; default?: number; optional?: boolean }
@@ -87,16 +87,10 @@ export function buildObjective(def: ObjectiveDef, a: Answers, index: number, tod
   }
 }
 
-/**
- * Hábitos generales sugeridos (PROPUESTA): fáciles de Cuerpo y Mente del catálogo automático,
- * alternando pilares, hasta `count`. La persona los quita o agrega.
- */
-export function suggestGeneral(count: number, exclude: Set<string>): DraftHabit[] {
-  const pools = ['cuerpo', 'mente'].map((p) => CATALOG.filter((h) => h.auto !== false && h.tier === 1 && catalogPillar(h.area) === p && !exclude.has(h.id)))
-  const out: DraftHabit[] = []
-  for (let i = 0; out.length < count && (pools[0].length || pools[1].length); i++) {
-    const h = pools[i % 2].shift()
-    if (h) out.push({ key: `g-${h.id}`, name: h.name, catalog_id: h.id, pillar: catalogPillar(h.area), weight: 1, block: 'general' })
-  }
-  return out
+/** Hábitos generales por defecto para todos (content/onboarding.json → generalDefaults): Hacer la cama y Meditar. */
+export function suggestGeneral(exclude: Set<string> = new Set()): DraftHabit[] {
+  return (content.generalDefaults.habits as string[]).filter((id) => !exclude.has(id) && catalogById(id)).map((id) => {
+    const h = catalogById(id)!
+    return { key: `g-${id}`, name: h.name, catalog_id: id, pillar: catalogPillar(h.area), weight: 1, block: 'general' as const }
+  })
 }

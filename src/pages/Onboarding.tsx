@@ -92,7 +92,7 @@ export default function Onboarding() {
       used.add(id)
       return { key: `d-${id}`, name: c.name, catalog_id: id, pillar: catalogPillar(c.area), weight: Math.min(3, c.tier), block: 'general', private: Boolean(c.private_default) }
     })
-    const general = suggestGeneral(arch?.start_habits ?? 3, used)
+    const general = suggestGeneral(used)
     setPack([...fromGoals, ...direct, ...general])
     const v = new Set<string>(directVices(d.quiz))
     objs.forEach((o) => { if (o.vice) v.add(o.vice.suggestion_id) })

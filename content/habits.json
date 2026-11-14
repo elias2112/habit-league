@@ -309,6 +309,14 @@
       "criterion": "Una comida compartida, con los teléfonos guardados.",
       "tier": 2,
       "auto": false
+    },
+    {
+      "id": "hacer_cama",
+      "area": "foco",
+      "name": "Hacer la cama",
+      "criterion": "Hacer la cama al levantarte.",
+      "tier": 1,
+      "auto": false
     }
   ]
 }

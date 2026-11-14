@@ -137,46 +137,50 @@ alter table public.habits add column if not exists objective_id uuid;
 alter table public.catalog_habits add column if not exists pillar text;
 
 -- BEGIN CATALOG3 (generado por scripts/gen-catalog-sql.mjs; no editar a mano)
-update public.catalog_habits set pillar = 'cuerpo' where id = 'caminar_30';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'estirar_10';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'ejercicio_20';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'fuerza_30';
-update public.catalog_habits set pillar = 'mente' where id = 'respirar_5';
-update public.catalog_habits set pillar = 'mente' where id = 'diario_5';
-update public.catalog_habits set pillar = 'mente' where id = 'leer_15';
-update public.catalog_habits set pillar = 'mente' where id = 'meditar_15';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'pantallas_off_30';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'sin_cafeina_tarde';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'despertar_fijo';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'dormir_7h';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'agua_2l';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'verdura_2';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'cocinar_casa';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'sin_ultraprocesados';
-update public.catalog_habits set pillar = 'mente' where id = 'planificar_5';
-update public.catalog_habits set pillar = 'mente' where id = 'cerrar_dia';
-update public.catalog_habits set pillar = 'mente' where id = 'tarea_dificil';
-update public.catalog_habits set pillar = 'mente' where id = 'bloque_profundo_45';
-update public.catalog_habits set pillar = null where id = 'mensaje_alguien';
-update public.catalog_habits set pillar = null where id = 'agradecer';
-update public.catalog_habits set pillar = null where id = 'llamada_10';
-update public.catalog_habits set pillar = null where id = 'plan_persona';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'pasos_10k';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'correr_5k';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'fumar_menos';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'dia_sin_fumar';
-update public.catalog_habits set pillar = 'mente' where id = 'redes_2h';
-update public.catalog_habits set pillar = 'mente' where id = 'aire_libre_20';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'acostarse_fijo';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'cama_sin_celular';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'max_2_tragos';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'dia_sin_alcohol';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'sin_delivery';
-update public.catalog_habits set pillar = 'cuerpo' where id = 'fruta_2';
-update public.catalog_habits set pillar = 'mente' where id = 'celular_manana';
-update public.catalog_habits set pillar = 'mente' where id = 'pomodoros_4';
-update public.catalog_habits set pillar = null where id = 'ayudar_alguien';
-update public.catalog_habits set pillar = null where id = 'comida_compartida';
+insert into public.catalog_habits (id, area, name, criterion, tier, target, unit, private_default, pillar) values
+  ('caminar_30', 'cuerpo', 'Caminar 30 minutos', 'Al menos 30 minutos caminando, sumados en el día.', 1, 1, null, false, 'cuerpo'),
+  ('estirar_10', 'cuerpo', 'Estirar 10 minutos', '10 minutos de estiramientos o movilidad.', 1, 1, null, false, 'cuerpo'),
+  ('ejercicio_20', 'cuerpo', 'Hacer ejercicio 20 minutos', '20 minutos de actividad que te suba el pulso.', 2, 1, null, false, 'cuerpo'),
+  ('fuerza_30', 'cuerpo', 'Entrenamiento de fuerza', 'Una sesión de fuerza de al menos 30 minutos.', 3, 1, null, false, 'cuerpo'),
+  ('respirar_5', 'mente', 'Respirar o meditar 5 minutos', '5 minutos de respiración o meditación.', 1, 1, null, false, 'mente'),
+  ('diario_5', 'mente', 'Escribir en un diario', 'Al menos 5 minutos escribiendo sobre tu día.', 1, 1, null, false, 'mente'),
+  ('leer_15', 'mente', 'Leer 15 minutos', '15 minutos de lectura (libro, no redes).', 2, 1, null, false, 'mente'),
+  ('meditar_15', 'mente', 'Meditar 15 minutos', '15 minutos de meditación sin interrupciones.', 3, 1, null, false, 'mente'),
+  ('pantallas_off_30', 'sueno', 'Pantallas apagadas 30 min antes de dormir', 'Sin pantallas los últimos 30 minutos antes de dormir.', 1, 1, null, false, 'cuerpo'),
+  ('sin_cafeina_tarde', 'sueno', 'Sin cafeína después de las 16:00', 'Ninguna bebida con cafeína pasadas las 16:00.', 1, 1, null, false, 'cuerpo'),
+  ('despertar_fijo', 'sueno', 'Despertar a la misma hora', 'Despertar dentro de ±30 minutos de tu hora objetivo.', 2, 1, null, false, 'cuerpo'),
+  ('dormir_7h', 'sueno', 'Dormir 7 horas o más', 'Dormir al menos 7 horas (lo declarás vos).', 3, 1, null, false, 'cuerpo'),
+  ('agua_2l', 'alimentacion', 'Tomar 2 litros de agua', 'Unos 2 litros en el día: 8 vasos de 250 ml.', 1, 8, 'vasos', false, 'cuerpo'),
+  ('verdura_2', 'alimentacion', 'Verdura en 2 comidas', 'Verdura en al menos 2 comidas del día.', 1, 2, 'comidas', false, 'cuerpo'),
+  ('cocinar_casa', 'alimentacion', 'Cocinar una comida en casa', 'Preparar con tus manos al menos una comida del día.', 2, 1, null, false, 'cuerpo'),
+  ('sin_ultraprocesados', 'alimentacion', 'Un día sin ultraprocesados', 'Ninguna comida ultraprocesada en todo el día.', 3, 1, null, false, 'cuerpo'),
+  ('planificar_5', 'foco', 'Planificar el día 5 minutos', 'Escribir tus prioridades antes de empezar.', 1, 1, null, false, 'mente'),
+  ('cerrar_dia', 'foco', 'Anotar 3 prioridades para mañana', 'Dejar escritas 3 prioridades para el día siguiente.', 1, 1, null, false, 'mente'),
+  ('tarea_dificil', 'foco', 'Hacer primero la tarea más difícil', 'Empezar el día con la tarea que más te cuesta.', 2, 1, null, false, 'mente'),
+  ('bloque_profundo_45', 'foco', 'Un bloque de trabajo profundo de 45 min', '45 minutos seguidos en una sola tarea, sin distracciones.', 3, 1, null, false, 'mente'),
+  ('mensaje_alguien', 'social', 'Escribirle a alguien que querés', 'Enviar un mensaje a un amigo o familiar.', 1, 1, null, false, null),
+  ('agradecer', 'social', 'Agradecer a alguien', 'Agradecerle a alguien por algo concreto.', 1, 1, null, false, null),
+  ('llamada_10', 'social', 'Llamar a alguien 10 minutos', 'Una llamada o videollamada de al menos 10 minutos.', 2, 1, null, false, null),
+  ('plan_persona', 'social', 'Pasar tiempo en persona con alguien', 'Compartir un rato en persona con alguien que te importa.', 3, 1, null, false, null),
+  ('pasos_10k', 'cuerpo', '10.000 pasos', 'Llegar a 10.000 pasos en el día (podés mirar el contador del teléfono).', 2, 1, null, false, 'cuerpo'),
+  ('correr_5k', 'cuerpo', 'Correr 5 km', 'Correr al menos 5 km, de una o en tramos.', 3, 1, null, false, 'cuerpo'),
+  ('fumar_menos', 'cuerpo', 'Fumar menos que ayer', 'Fumar menos cigarrillos que el día anterior.', 2, 1, null, true, 'cuerpo'),
+  ('dia_sin_fumar', 'cuerpo', 'Día sin fumar', 'Ningún cigarrillo ni vapeo en todo el día.', 3, 1, null, true, 'cuerpo'),
+  ('redes_2h', 'mente', 'Menos de 2 h de redes', 'Menos de 2 horas en redes sociales (mirá el tiempo de uso del teléfono).', 2, 1, null, false, 'mente'),
+  ('aire_libre_20', 'mente', '20 minutos al aire libre', 'Al menos 20 minutos afuera, sin auriculares.', 1, 1, null, false, 'mente'),
+  ('acostarse_fijo', 'sueno', 'Acostarte a la misma hora', 'Ir a la cama dentro de ±30 minutos de tu hora objetivo.', 2, 1, null, false, 'cuerpo'),
+  ('cama_sin_celular', 'sueno', 'Celular fuera de la cama', 'Dejar el celular lejos de la cama al acostarte.', 1, 1, null, false, 'cuerpo'),
+  ('max_2_tragos', 'alimentacion', 'Máximo 2 tragos', 'Si tomás alcohol, no más de 2 tragos en el día.', 2, 1, null, true, 'cuerpo'),
+  ('dia_sin_alcohol', 'alimentacion', 'Día sin alcohol', 'Nada de alcohol en todo el día.', 3, 1, null, true, 'cuerpo'),
+  ('sin_delivery', 'alimentacion', 'Día sin delivery', 'Ni delivery ni comida rápida en todo el día.', 2, 1, null, false, 'cuerpo'),
+  ('fruta_2', 'alimentacion', '2 frutas', 'Comer al menos 2 frutas en el día.', 1, 2, 'frutas', false, 'cuerpo'),
+  ('celular_manana', 'foco', 'Sin celular la primera hora', 'No mirar el celular durante la primera hora después de despertarte.', 1, 1, null, false, 'mente'),
+  ('pomodoros_4', 'foco', '4 bloques de 25 minutos', '4 bloques de 25 minutos de trabajo concentrado, con pausas.', 2, 4, 'bloques', false, 'mente'),
+  ('ayudar_alguien', 'social', 'Ayudar a alguien', 'Hacer algo concreto por otra persona sin que te lo pida.', 1, 1, null, false, null),
+  ('comida_compartida', 'social', 'Comer con alguien sin pantallas', 'Una comida compartida, con los teléfonos guardados.', 2, 1, null, false, null),
+  ('hacer_cama', 'foco', 'Hacer la cama', 'Hacer la cama al levantarte.', 1, 1, null, false, 'mente')
+on conflict (id) do update set area = excluded.area, name = excluded.name, criterion = excluded.criterion, tier = excluded.tier,
+  target = excluded.target, unit = excluded.unit, private_default = excluded.private_default, pillar = excluded.pillar;
 -- END CATALOG3
 
 create or replace function public.pillar_ok(p_pillar text)

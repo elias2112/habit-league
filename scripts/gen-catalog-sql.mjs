@@ -95,8 +95,13 @@ replaceBlock(M6, 'CONFIG3', [
 console.log(`✓ ${Object.keys(flat).length} parámetros → 006`)
 
 // Pilar de cada hábito del catálogo según areaToPillar; sin pilar (Conexión) = fuera del catálogo nuevo.
-replaceBlock(M6, 'CATALOG3', habits.map((h) =>
-  `update public.catalog_habits set pillar = ${q(cfg.areaToPillar[h.area] ?? null)} where id = ${q(h.id)};`).join('\n'))
+// Catálogo completo con pilar (upsert): así un hábito nuevo del catálogo llega con solo re-ejecutar la 006.
+replaceBlock(M6, 'CATALOG3', [
+  'insert into public.catalog_habits (id, area, name, criterion, tier, target, unit, private_default, pillar) values',
+  habits.map((h) => `  (${[h.id, h.area, h.name, h.criterion, h.tier, h.target ?? 1, h.unit ?? null, Boolean(h.private_default), cfg.areaToPillar[h.area] ?? null].map(q).join(', ')})`).join(',\n'),
+  'on conflict (id) do update set area = excluded.area, name = excluded.name, criterion = excluded.criterion, tier = excluded.tier,',
+  '  target = excluded.target, unit = excluded.unit, private_default = excluded.private_default, pillar = excluded.pillar;',
+].join('\n'))
 console.log(`✓ pilares de ${habits.length} hábitos → 006 (${habits.filter((h) => !cfg.areaToPillar[h.area]).length} quedan fuera)`)
 
 const store = JSON.parse(readFileSync('content/store.json', 'utf8'))
