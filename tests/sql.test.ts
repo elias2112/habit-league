@@ -12,6 +12,7 @@ const FILES = [
   '../supabase/migrations/003_grupo_objetivos_fotos.sql',
   '../supabase/migrations/004_liga_juicio_cofre.sql',
   '../supabase/migrations/005_vicios.sql',
+  '../supabase/migrations/005b_respaldo.sql',
   '../supabase/migrations/006_v3_plan_monedas.sql',
 ]
 const schema = FILES.map((p) => readFileSync(new URL(p, import.meta.url), 'utf8')).join('\n')
@@ -367,11 +368,12 @@ describe('objetivos', () => {
 })
 
 describe('migraciones', () => {
-  it('se pueden volver a ejecutar sin errores (002 a 006, en orden)', async () => {
+  it('se pueden volver a ejecutar sin errores (002 a 006 con el respaldo, en orden)', async () => {
     await db.exec(readFileSync(new URL(FILES[1], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[2], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[3], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[4], import.meta.url), 'utf8'))
     await db.exec(readFileSync(new URL(FILES[5], import.meta.url), 'utf8'))
+    await db.exec(readFileSync(new URL(FILES[6], import.meta.url), 'utf8'))
   })
 })

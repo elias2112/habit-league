@@ -1,13 +1,21 @@
--- 006 — Spec v3: plan por día, puntaje recalculado, vicios en tres estados, votación de cambios,
---        Jodita coin (billetera, pool semanal, tienda). Ver docs/MODELO_V3.md.
--- Ejecutar DESPUÉS de schema.sql y 002–005. Se puede re-ejecutar (si re-ejecutás una anterior, re-ejecutá esta).
--- Datos (config, catálogo con pilares, tienda) desde content/ con `npm run catalog`.
+-- 006 — Spec v4: plan por día, puntaje recalculado, vicios en tres estados, votación de cambios,
+--        Jodita coin (billetera, pool semanal, tienda), niveles, bloques diarios, fuerza base,
+--        reiniciar y eliminar cuenta. Ver docs/MODELO_V3.md.
+-- Ejecutar DESPUÉS de schema.sql, 002–005 y 005b (respaldo). Se puede re-ejecutar (si re-ejecutás una
+-- anterior, re-ejecutá esta). Datos (config, catálogo, tienda) desde content/ con `npm run catalog`.
 --
 -- Principio: se guardan definiciones, fotos del plan y eventos crudos. Puntos, multiplicadores, rachas,
--- monedas y saldo se RECALCULAN. Excepción acordada: los días anteriores a esta migración quedan
--- congelados como "legado" (legacy_days) con los puntos que tenían.
+-- monedas, experiencia, nivel y saldo se RECALCULAN.
+-- NO se migran datos viejos (decisión del dueño, 2026-11-14): cada persona reinicia y empieza de cero.
+-- Los datos anteriores quedan en el esquema respaldo_v2 (005b).
 
--- ───────────── 0. Guada: un grupo por persona ─────────────
+-- ───────────── 0. Guardas: respaldo hecho y un grupo por persona ─────────────
+do $$
+begin
+  if to_regclass('respaldo_v2.hecho') is null then
+    raise exception 'Migración 006 detenida: primero ejecutá 005b_respaldo.sql (respaldo de los datos viejos).';
+  end if;
+end $$;
 do $$
 declare n int; who text;
 begin
@@ -42,8 +50,14 @@ insert into public.game_config (key, value) values
   ('minActiveHabits', '3'::jsonb),
   ('maxObjectives', '3'::jsonb),
   ('groupScopeDefaultWeight', '2'::jsonb),
+  ('maxGoals', '3'::jsonb),
   ('pillars', '[{"id":"cuerpo","name":"Cuerpo","icon":"💪","color":"#FF6B6B"},{"id":"mente","name":"Mente","icon":"🧠","color":"#B4A8FF"},{"id":"dinero","name":"Dinero","icon":"💰","color":"#7BD88F"},{"id":"habilidades","name":"Habilidades","icon":"🛠️","color":"#5AA9FF"},{"id":"creatividad","name":"Creatividad","icon":"🎨","color":"#FF8FD0"},{"id":"carrera","name":"Carrera y estudios","icon":"🎓","color":"#4FD1C5","provisional":true}]'::jsonb),
-  ('areaToPillar', '{"cuerpo":"cuerpo","sueno":"cuerpo","alimentacion":"cuerpo","mente":"mente","foco":"mente","social":null}'::jsonb)
+  ('areaToPillar', '{"cuerpo":"cuerpo","sueno":"cuerpo","alimentacion":"cuerpo","mente":"mente","foco":"mente","social":null}'::jsonb),
+  ('xpPerLevel', '300'::jsonb),
+  ('strengthExercises', '[{"id":"flexiones","name":"Flexiones","unit":"repeticiones","targets":[10,30,50,100]},{"id":"sentadillas","name":"Sentadillas","unit":"repeticiones","targets":[10,30,50,100]},{"id":"dominadas","name":"Dominadas","unit":"repeticiones","targets":[10,30,50,100]}]'::jsonb),
+  ('strengthTargets', '{"flexiones":[10,30,50,100],"sentadillas":[10,30,50,100],"dominadas":[10,30,50,100]}'::jsonb),
+  ('strengthWeight', '1'::jsonb),
+  ('strengthDefaultLevel', '0'::jsonb)
 on conflict (key) do update set value = excluded.value;
 -- END CONFIG3
 
@@ -110,27 +124,7 @@ create policy "user_game: grupo" on public.user_game for select to authenticated
 create policy "legacy: grupo" on public.legacy_days for select to authenticated using (public.shares_group_with(user_id));
 grant select on public.user_game, public.legacy_days to authenticated;
 
--- Congelar con los puntos que tenían (función day_points de 005), solo la primera vez.
-insert into public.user_game (user_id, v3_since)
-select id, public.user_today(id) from public.profiles
-where not exists (select 1 from public.user_game g where g.user_id = profiles.id);
-
-do $$
-begin
-  if exists (select 1 from pg_proc where proname = 'vice_multiplier')
-     and not exists (select 1 from pg_proc where proname = 'score_pure') then
-    insert into public.legacy_days (user_id, day, points)
-    select d.user_id, d.day, public.day_points(d.user_id, d.day)
-    from (
-      select distinct l.user_id, l.log_date as day from public.habit_logs l
-      union
-      select distinct s.user_id, s.day from public.vice_slips s
-    ) d
-    join public.user_game g on g.user_id = d.user_id
-    where d.day < g.v3_since
-    on conflict do nothing;
-  end if;
-end $$;
+-- Sin migración (decisión del dueño): no se congela nada. legacy_days queda vacía (preparada).
 
 create or replace function public.v3_since(p_user uuid)
 returns date language sql stable security definer set search_path = public as $$
@@ -206,11 +200,6 @@ grant select on public.user_notices to authenticated;
 update public.habits h set pillar = public.cfg_at(null, 'areaToPillar', current_date) ->> h.area
 where h.pillar is null and h.area is not null and (public.cfg_at(null, 'areaToPillar', current_date) ->> h.area) is not null;
 
-insert into public.user_notices (user_id, text)
-select user_id, 'Tu hábito «' || name || '» era del pilar Conexión, que salió del juego. Lo archivamos con su historial intacto. Si lo querés conservar, volvé a agregarlo en otro pilar.'
-from public.habits where pillar is null and area = 'social' and not archived;
-update public.habits set archived = true where pillar is null and area = 'social' and not archived;
-
 -- Integridad de hábitos (reemplaza la de 003): pilar válido; catálogo manda nombre, pilar y meta.
 create or replace function public.validate_habit()
 returns trigger
@@ -279,8 +268,10 @@ create table if not exists public.plans (
   effective_from date not null,
   created_at timestamptz not null default now(),
   request_id uuid,
+  training_level int,   -- nivel de entrenamiento declarado (define la fuerza base); cambia por votación
   unique (user_id, effective_from)
 );
+alter table public.plans add column if not exists training_level int;
 create table if not exists public.plan_habits (
   plan_id uuid not null references public.plans(id) on delete cascade,
   habit_id uuid not null references public.habits(id) on delete cascade,
@@ -295,6 +286,19 @@ create table if not exists public.plan_vices (
   severity text not null check (severity in ('leve','normal','grave')),
   primary key (plan_id, vice_id)
 );
+-- Bloques diarios (v4): generales, de los objetivos, deporte o gimnasio, y fuerza base (para todos).
+alter table public.habits add column if not exists block text not null default 'general';
+alter table public.habits drop constraint if exists habits_block_check;
+alter table public.habits add constraint habits_block_check check (block in ('general','objetivo','deporte','fuerza'));
+alter table public.habits add column if not exists strength_id text;   -- ejercicio de fuerza base (config)
+-- Personalización de cada objetivo (meta con número y punto de partida).
+alter table public.objectives
+  add column if not exists pillar text,
+  add column if not exists unit text,
+  add column if not exists target_value numeric,
+  add column if not exists start_value numeric,
+  add column if not exists deadline date;
+
 create table if not exists public.plan_objectives (
   plan_id uuid not null references public.plans(id) on delete cascade,
   objective_id uuid not null references public.objectives(id) on delete cascade,
@@ -318,7 +322,7 @@ create table if not exists public.change_requests (
   scope text not null check (scope in ('me','group')),
   kind text not null check (kind in ('habit.add','habit.remove','habit.weight','habit.target',
                                      'vice.add','vice.remove','vice.weight','vice.severity',
-                                     'objective.add','objective.remove','store.add','store.update','config.set')),
+                                     'objective.add','objective.remove','store.add','store.update','config.set','training.level')),
   payload jsonb not null,
   private boolean not null default false,
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
@@ -326,6 +330,10 @@ create table if not exists public.change_requests (
   closes_at timestamptz not null,
   decided_at timestamptz
 );
+alter table public.change_requests drop constraint if exists change_requests_kind_check;
+alter table public.change_requests add constraint change_requests_kind_check check (kind in (
+  'habit.add','habit.remove','habit.weight','habit.target','vice.add','vice.remove','vice.weight','vice.severity',
+  'objective.add','objective.remove','store.add','store.update','config.set','training.level'));
 create index if not exists change_requests_group_idx on public.change_requests (group_id, status, created_at desc);
 create table if not exists public.change_votes (
   request_id uuid not null references public.change_requests(id) on delete cascade,
@@ -673,36 +681,82 @@ $$;
 -- Plan inicial: rige desde HOY y sin votación. Solo si la persona todavía no tiene plan.
 -- p_habits: [{catalog_id} | {name, pillar, criterion, unit}] + weight (1–3) + target (opcional) + private (solo catálogo)
 -- p_vices:  [{name, suggestion_id, weight, severity}]   p_objectives: [{title, tag, catalog_id, goal_id}]
-create or replace function public.create_initial_plan(p_habits jsonb, p_vices jsonb default '[]', p_objectives jsonb default '[]')
+drop function if exists public.create_initial_plan(jsonb, jsonb, jsonb);
+drop function if exists public.create_initial_plan(jsonb, jsonb, jsonb, int);
+-- Plan inicial (cuestionario v4): rige desde HOY y sin votación. Solo si la persona todavía no tiene plan.
+-- p_habits:     [{catalog_id | name, pillar, criterion, unit}, weight 1–3, target?, private? (solo catálogo),
+--                block ('general'|'objetivo'|'deporte'), objective_index? (0..), goal_step?]
+-- p_vices:      [{name, suggestion_id, weight, severity}]
+-- p_objectives: [{title, catalog_id, tag, pillar, unit, target_value, start_value, deadline, chest?: {title, target, deadline}}]
+-- p_training_level: 0..N → la fuerza base (content/config.json → strength) la agrega la base para todos.
+create function public.create_initial_plan(p_habits jsonb, p_vices jsonb default '[]', p_objectives jsonb default '[]',
+                                           p_training_level int default null)
 returns uuid language plpgsql security definer set search_path = public as $$
-declare pid uuid; d date; h jsonb; v jsonb; o jsonb; hid uuid; vid uuid; oid_ uuid; mn int; mx int;
+declare
+  pid uuid; d date; h jsonb; v jsonb; o jsonb; ex jsonb; hid uuid; vid uuid; oid_ uuid; gid uuid;
+  mx int; lvl int; maxl int; idx int; oids uuid[] := '{}'; gids uuid[] := '{}';
 begin
   if auth.uid() is null then raise exception 'No autenticado'; end if;
   if exists (select 1 from plans where user_id = auth.uid()) then raise exception 'Ya tenés un plan: los cambios se proponen y rigen desde mañana.'; end if;
   d := public.user_today(auth.uid());
-  mn := public.cfg_num(auth.uid(), 'minActiveHabits', d);
-  mx := public.cfg_num(auth.uid(), 'maxObjectives', d);
-  if jsonb_array_length(coalesce(p_habits, '[]')) < mn then raise exception 'Necesitás al menos % hábitos.', mn; end if;
+  mx := public.cfg_num(auth.uid(), 'maxGoals', d);
   if jsonb_array_length(coalesce(p_objectives, '[]')) > mx then raise exception 'Hasta % objetivos.', mx; end if;
+  if not exists (select 1 from jsonb_array_elements(coalesce(p_habits, '[]')) x where x ->> 'block' = 'deporte') then
+    raise exception 'Elegí tu deporte o actividad física.';
+  end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(p_habits, '[]')) x where x ->> 'block' = 'fuerza') then
+    raise exception 'La fuerza base la agrega el juego según tu nivel de entrenamiento.';
+  end if;
+  maxl := jsonb_array_length(public.cfg_at(auth.uid(), 'strengthExercises', d) -> 0 -> 'targets') - 1;
+  lvl := case when p_training_level between 0 and maxl then p_training_level
+              else public.cfg_num(auth.uid(), 'strengthDefaultLevel', d)::int end;
+
   insert into user_game (user_id, v3_since) values (auth.uid(), d) on conflict do nothing;
-  insert into plans (user_id, effective_from) values (auth.uid(), d) returning id into pid;
+  insert into plans (user_id, effective_from, training_level) values (auth.uid(), d, lvl) returning id into pid;
+
+  for o in select * from jsonb_array_elements(coalesce(p_objectives, '[]')) loop
+    gid := null;
+    if o ? 'chest' then
+      insert into goals (user_id, title, kind, target, unit, deadline)
+      values (auth.uid(), coalesce(o -> 'chest' ->> 'title', o ->> 'title'), 'ahorro', (o -> 'chest' ->> 'target')::numeric, '€',
+              nullif(o -> 'chest' ->> 'deadline', '')::date)
+      returning id into gid;
+    end if;
+    insert into objectives (user_id, title, tag, catalog_id, pillar, unit, target_value, start_value, deadline, goal_id)
+    values (auth.uid(), o ->> 'title', o ->> 'tag', o ->> 'catalog_id', o ->> 'pillar', o ->> 'unit',
+            nullif(o ->> 'target_value', '')::numeric, nullif(o ->> 'start_value', '')::numeric, nullif(o ->> 'deadline', '')::date, gid)
+    returning id into oid_;
+    insert into plan_objectives (plan_id, objective_id) values (pid, oid_);
+    oids := array_append(oids, oid_);
+    gids := array_append(gids, gid);
+  end loop;
+
   for h in select * from jsonb_array_elements(p_habits) loop
-    insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private)
+    idx := nullif(h ->> 'objective_index', '')::int;
+    insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private, block, objective_id, goal_id, goal_step)
     values (auth.uid(), coalesce(h ->> 'name', 'x'), h ->> 'catalog_id', h ->> 'pillar', h ->> 'criterion', h ->> 'unit',
-            coalesce((h ->> 'private')::boolean, false) and h ->> 'catalog_id' is not null)
+            coalesce((h ->> 'private')::boolean, false) and h ->> 'catalog_id' is not null,
+            coalesce(h ->> 'block', 'general'),
+            case when idx is not null then oids[idx + 1] end,
+            case when idx is not null then gids[idx + 1] end,
+            coalesce(nullif(h ->> 'goal_step', '')::numeric, 1))
     returning id into hid;
     insert into plan_habits (plan_id, habit_id, weight, target)
     values (pid, hid, coalesce((h ->> 'weight')::int, 2),
             coalesce(nullif(h ->> 'target', '')::numeric, (select case when target > 1 then target end from habits where id = hid)));
   end loop;
+
+  -- Fuerza base para todos.
+  for ex in select * from jsonb_array_elements(public.cfg_at(auth.uid(), 'strengthExercises', d)) loop
+    insert into habits (user_id, name, pillar, unit, block, strength_id)
+    values (auth.uid(), ex ->> 'name', 'cuerpo', ex ->> 'unit', 'fuerza', ex ->> 'id') returning id into hid;
+    insert into plan_habits (plan_id, habit_id, weight, target)
+    values (pid, hid, public.cfg_num(auth.uid(), 'strengthWeight', d)::int, (ex -> 'targets' ->> lvl)::numeric);
+  end loop;
+
   for v in select * from jsonb_array_elements(coalesce(p_vices, '[]')) loop
     insert into vices (user_id, name, suggestion_id) values (auth.uid(), v ->> 'name', v ->> 'suggestion_id') returning id into vid;
     insert into plan_vices (plan_id, vice_id, weight, severity) values (pid, vid, coalesce((v ->> 'weight')::int, 1), coalesce(v ->> 'severity', 'normal'));
-  end loop;
-  for o in select * from jsonb_array_elements(coalesce(p_objectives, '[]')) loop
-    insert into objectives (user_id, title, tag, catalog_id, goal_id)
-    values (auth.uid(), o ->> 'title', o ->> 'tag', o ->> 'catalog_id', nullif(o ->> 'goal_id', '')::uuid) returning id into oid_;
-    insert into plan_objectives (plan_id, objective_id) values (pid, oid_);
   end loop;
   return pid;
 end $$;
@@ -783,7 +837,8 @@ begin
   select id into pid from plans where user_id = p_user and effective_from = eff;
   if pid is not null then return pid; end if;
   cur := public.plan_for(p_user, eff);
-  insert into plans (user_id, effective_from, request_id) values (p_user, eff, p_request) returning id into pid;
+  insert into plans (user_id, effective_from, request_id, training_level)
+  values (p_user, eff, p_request, (select training_level from plans where id = cur)) returning id into pid;
   if cur is not null then
     insert into plan_habits (plan_id, habit_id, weight, target) select pid, habit_id, weight, target from plan_habits where plan_id = cur;
     insert into plan_vices (plan_id, vice_id, weight, severity) select pid, vice_id, weight, severity from plan_vices where plan_id = cur;
@@ -834,11 +889,13 @@ begin
         continue;
       end if;
       -- Un hábito ligado a un cofre (goal_id, goal_step) solo se liga en el plan de quien lo propone.
-      insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private, goal_id, goal_step)
+      insert into habits (user_id, name, catalog_id, pillar, criterion, unit, private, goal_id, goal_step, block, objective_id)
       values (u, coalesce(p ->> 'name', 'x'), p ->> 'catalog_id', p ->> 'pillar', p ->> 'criterion', p ->> 'unit',
               coalesce((p ->> 'private')::boolean, false) and p ->> 'catalog_id' is not null and u = r.proposer_id,
               case when u = r.proposer_id then nullif(p ->> 'goal_id', '')::uuid end,
-              coalesce(case when u = r.proposer_id then nullif(p ->> 'goal_step', '')::numeric end, 1))
+              coalesce(case when u = r.proposer_id then nullif(p ->> 'goal_step', '')::numeric end, 1),
+              case when coalesce(p ->> 'block', 'general') = 'objetivo' and u <> r.proposer_id then 'general' else coalesce(p ->> 'block', 'general') end,
+              case when u = r.proposer_id then nullif(p ->> 'objective_id', '')::uuid end)
       returning id into hid;
       insert into plan_habits (plan_id, habit_id, weight, target)
       values (pid, hid, w, coalesce(nullif(p ->> 'target', '')::numeric, (select case when target > 1 then target end from habits where id = hid)));
@@ -872,6 +929,12 @@ begin
       continue when (select count(*) from plan_objectives where plan_id = pid) >= public.cfg_num(u, 'maxObjectives', public.user_today(u) + 1);
       insert into objectives (user_id, title, tag, catalog_id) values (u, p ->> 'title', p ->> 'tag', p ->> 'catalog_id') returning id into oid_;
       insert into plan_objectives (plan_id, objective_id) values (pid, oid_);
+
+    elsif r.kind = 'training.level' then
+      -- Nuevo nivel de entrenamiento: nueva meta de la fuerza base desde mañana.
+      update plans set training_level = (p ->> 'level')::int where id = pid;
+      update plan_habits ph set target = (public.cfg_at(u, 'strengthTargets', public.user_today(u) + 1) -> h.strength_id ->> (p ->> 'level')::int)::numeric
+      from habits h where h.id = ph.habit_id and ph.plan_id = pid and h.block = 'fuerza';
 
     elsif r.kind = 'objective.remove' then
       delete from plan_objectives where plan_id = pid and (objective_id = (p ->> 'objective_id')::uuid
@@ -918,6 +981,26 @@ begin
     if n <= mn then raise exception 'Necesitás al menos % hábitos: agregá otro antes de sacar este.', mn; end if;
   end if;
   if (p_payload ? 'weight') and (p_payload ->> 'weight')::int not between 1 and 3 then raise exception 'El peso va de 1 a 3.'; end if;
+  if p_kind = 'habit.add' and p_payload ->> 'block' = 'fuerza' then
+    raise exception 'La fuerza base es para todos: cambiá tu nivel de entrenamiento.';
+  end if;
+  if p_kind = 'habit.remove' then
+    if exists (select 1 from habits where id = nullif(p_payload ->> 'habit_id', '')::uuid and block = 'fuerza') then
+      raise exception 'La fuerza base es para todos: no se saca, se ajusta con el nivel de entrenamiento.';
+    end if;
+    if exists (select 1 from habits where id = nullif(p_payload ->> 'habit_id', '')::uuid and block = 'deporte')
+       and (select count(*) from plan_habits ph join habits h on h.id = ph.habit_id
+            where ph.plan_id = public.plan_for(auth.uid(), d + 1) and h.block = 'deporte') <= 1 then
+      raise exception 'Todos tienen un deporte o actividad: agregá otro antes de sacar este.';
+    end if;
+  end if;
+  if p_kind = 'training.level' then
+    if p_scope <> 'me' then raise exception 'El nivel de entrenamiento es personal.'; end if;
+    if (p_payload ->> 'level')::int not between 0 and
+       jsonb_array_length(public.cfg_at(auth.uid(), 'strengthExercises', d) -> 0 -> 'targets') - 1 then
+      raise exception 'Nivel de entrenamiento inválido.';
+    end if;
+  end if;
   priv := p_scope = 'me' and (
        coalesce((p_payload ->> 'private')::boolean, false)
     or exists (select 1 from habits where id = nullif(p_payload ->> 'habit_id', '')::uuid and private)
@@ -1014,6 +1097,29 @@ begin
   else delete from store_optins where user_id = auth.uid() and item_id = p_item; end if;
 end $$;
 
+-- ───────────── 15. Niveles (porta reference/levels.mjs) ─────────────
+-- Experiencia = suma de los puntos de cada día desde el primer plan (hoy incluido); nivel = experiencia / xpPerLevel.
+-- Nada se guarda. Como solo suma, el nivel no baja. Valores PROVISIONALES (content/config.json → levels).
+create or replace function public.level_of(p_user uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+declare d date; today date; xp double precision := 0; per double precision; lvl int; into_ numeric;
+begin
+  today := public.user_today(p_user);
+  select min(effective_from) into d from plans where user_id = p_user;
+  if d is not null then
+    while d <= today loop
+      xp := xp + greatest(0, public.day_points(p_user, d)::double precision);
+      d := d + 1;
+    end loop;
+  end if;
+  per := public.cfg_num(p_user, 'xpPerLevel', today)::double precision;
+  xp := public.r2(xp)::double precision;
+  lvl := floor(xp / per)::int;
+  into_ := public.r2(xp - lvl * per);
+  return jsonb_build_object('xp', public.r2(xp), 'level', lvl, 'xpIntoLevel', into_, 'xpForNext', per,
+                            'progress', public.r2(into_::double precision / per));
+end $$;
+
 -- ───────────── 14. Lecturas para la UI ─────────────
 -- Mi día: plan vigente con pesos, metas, registros, vicios con estado y "días sin", puntaje y billetera.
 create or replace function public.my_day()
@@ -1030,7 +1136,8 @@ begin
     'wallet', public.wallet_of(auth.uid()),
     'habits', coalesce((select jsonb_agg(jsonb_build_object(
         'id', h.id, 'name', h.name, 'criterion', h.criterion, 'pillar', h.pillar, 'catalog_id', h.catalog_id, 'unit', h.unit,
-        'private', h.private, 'weight', ph.weight, 'target', ph.target, 'count', coalesce(l.count, 0), 'photo_path', l.photo_path)
+        'private', h.private, 'weight', ph.weight, 'target', ph.target, 'count', coalesce(l.count, 0), 'photo_path', l.photo_path,
+        'block', h.block, 'strength_id', h.strength_id, 'objective_id', h.objective_id)
         order by h.created_at)
       from plan_habits ph join habits h on h.id = ph.habit_id
       left join habit_logs l on l.habit_id = h.id and l.log_date = d
@@ -1043,9 +1150,12 @@ begin
       from plan_vices pv join vices v on v.id = pv.vice_id
       left join vice_days vd on vd.vice_id = v.id and vd.day = d
       where pv.plan_id = pid), '[]'),
-    'objectives', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'title', o.title, 'tag', o.tag, 'goal_id', o.goal_id))
+    'objectives', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'title', o.title, 'tag', o.tag, 'goal_id', o.goal_id,
+        'pillar', o.pillar, 'unit', o.unit, 'target_value', o.target_value, 'start_value', o.start_value, 'deadline', o.deadline))
       from plan_objectives po join objectives o on o.id = po.objective_id where po.plan_id = pid), '[]'),
     'tomorrow_changes', exists (select 1 from plans where user_id = auth.uid() and effective_from > d),
+    'training_level', (select training_level from plans where id = pid),
+    'level', public.level_of(auth.uid()),
     'notices', coalesce((select jsonb_agg(jsonb_build_object('id', n.id, 'text', n.text)) from user_notices n
                          where n.user_id = auth.uid() and n.read_at is null), '[]')
   );
@@ -1063,7 +1173,7 @@ language sql stable security definer set search_path = public as $$
   select p.id, p.username,
     coalesce((select jsonb_agg(jsonb_build_object(
         'name', case when h.private and p.id <> auth.uid() then 'Hábito privado' else h.name end,
-        'pillar', h.pillar, 'weight', ph.weight, 'target', ph.target, 'unit', h.unit) order by ph.weight desc, h.name)
+        'pillar', h.pillar, 'weight', ph.weight, 'target', ph.target, 'unit', h.unit, 'block', h.block) order by h.block, ph.weight desc, h.name)
       from plan_habits ph join habits h on h.id = ph.habit_id
       where ph.plan_id = public.plan_for(p.id, public.user_today(p.id))), '[]'),
     coalesce((select jsonb_agg(jsonb_build_object(
@@ -1079,7 +1189,7 @@ $$;
 drop function if exists public.group_leaderboard(uuid);
 create function public.group_leaderboard(p_group uuid)
 returns table (user_id uuid, username text, display_name text, archetype text,
-               total_points numeric, legacy_points numeric, max_points numeric, pct numeric, streak int, multiplier numeric)
+               total_points numeric, legacy_points numeric, max_points numeric, pct numeric, streak int, multiplier numeric, level int)
 language sql stable security definer set search_path = public as $$
   with base as (
     select m.user_id,
@@ -1105,7 +1215,8 @@ language sql stable security definer set search_path = public as $$
          100.0 * greatest(0, least(s.end_date, s.today) - s.from_date + 1),
          round(100.0 * s.total / nullif(100.0 * greatest(0, least(s.end_date, s.today) - s.from_date + 1), 0), 1),
          public.streak_as_of(p.id, s.today),
-         (public.day_score(p.id, s.today) ->> 'multiplier')::numeric
+         (public.day_score(p.id, s.today) ->> 'multiplier')::numeric,
+         (public.level_of(p.id) ->> 'level')::int
   from scored s join profiles p on p.id = s.user_id
   order by s.total desc, p.username;
 $$;
@@ -1167,52 +1278,120 @@ language sql stable security definer set search_path = public as $$
   left join d1 on d1.id = pl.id left join act on act.pillar = pl.id;
 $$;
 
--- ───────────── 15. Migración de datos existentes ─────────────
-do $$
-declare u record; pid uuid; d date;
-begin
-  for u in select g.user_id, g.v3_since from user_game g
-           where not exists (select 1 from plans p where p.user_id = g.user_id)
-             and exists (select 1 from habits h where h.user_id = g.user_id and not h.archived and h.pillar is not null) loop
-    insert into plans (user_id, effective_from) values (u.user_id, u.v3_since) returning id into pid;
-    insert into plan_habits (plan_id, habit_id, weight, target)
-    select pid, h.id, least(greatest(h.tier, 1), 3), case when h.target > 1 then h.target end
-    from habits h where h.user_id = u.user_id and not h.archived and h.pillar is not null;
-    -- Vicios declarados (005) → vicios con estados (normal, peso 1).
-    if to_regclass('public.user_vices') is not null then
-      insert into vices (id, user_id, name, suggestion_id)
-      select uv.id, uv.user_id, uv.name, uv.vice_id from user_vices uv
-      where uv.user_id = u.user_id and uv.ended_on is null on conflict do nothing;
-      insert into plan_vices (plan_id, vice_id, weight, severity)
-      select pid, uv.id, 1, 'normal' from user_vices uv where uv.user_id = u.user_id and uv.ended_on is null on conflict do nothing;
-      -- Tropiezos de hoy en adelante → recaída (los anteriores ya están en el legado).
-      insert into vices (user_id, name, suggestion_id)
-      select distinct s.user_id, vc.name, s.vice_id from vice_slips s join vice_catalog vc on vc.id = s.vice_id
-      where s.user_id = u.user_id and s.day >= u.v3_since
-        and not exists (select 1 from vices v where v.user_id = s.user_id and v.suggestion_id = s.vice_id);
-      insert into plan_vices (plan_id, vice_id, weight, severity)
-      select pid, v.id, 1, 'normal' from vices v where v.user_id = u.user_id on conflict do nothing;
-      insert into vice_days (user_id, vice_id, day, state)
-      select s.user_id, v.id, s.day, 'slipped' from vice_slips s join vices v on v.user_id = s.user_id and v.suggestion_id = s.vice_id
-      where s.user_id = u.user_id and s.day >= u.v3_since on conflict do nothing;
-    end if;
-    -- Objetivos que no son de ahorro (los de ahorro siguen como cofres). Hasta 3, los más nuevos.
-    insert into objectives (user_id, title, goal_id)
-    select g.user_id, g.title, g.id from goals g
-    where g.user_id = u.user_id and g.kind <> 'ahorro' and not g.archived
-      and not exists (select 1 from objectives o where o.goal_id = g.id)
-    order by g.created_at desc limit 3;
-    insert into plan_objectives (plan_id, objective_id)
-    select pid, o.id from objectives o where o.user_id = u.user_id on conflict do nothing;
-  end loop;
-end $$;
-
 -- Las RPC de 005 quedan fuera de uso.
 do $$
 begin
   if exists (select 1 from pg_proc where proname = 'declare_vice') then
     revoke execute on function public.declare_vice(text, text), public.end_vice(uuid), public.log_slip(text, boolean) from authenticated;
   end if;
+end $$;
+
+-- ───────────── 15b. Reiniciar y eliminar cuenta (spec v4 §7) ─────────────
+-- Las fotos (Storage) las borra la app ANTES de llamar a estas funciones (la base no las alcanza por cascada).
+
+-- Borra los datos del juego de una persona. Conserva: perfil (usuario), pertenencia al grupo y sus aportes a
+-- cofres compartidos (son del grupo). Los cambios que ya se aprobaron siguen aplicados; los pendientes se
+-- recalculan sin sus votos.
+create or replace function public.wipe_game_data(p_user uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare g uuid;
+begin
+  g := public.my_group(p_user);
+  delete from change_votes where voter_id = p_user;
+  delete from change_requests where proposer_id = p_user;
+  delete from purchases where user_id = p_user;
+  delete from store_optins where user_id = p_user;
+  delete from plans where user_id = p_user;                 -- fotos del plan (cascade plan_habits/vices/objectives)
+  delete from vice_days where user_id = p_user;
+  delete from vices where user_id = p_user;
+  delete from habits where user_id = p_user;                -- cascade: registros (feed), revisiones viejas
+  delete from objectives where user_id = p_user;            -- cascade: eventos
+  delete from goals where user_id = p_user;                 -- cofres personales (cascade: aportes, hitos)
+  delete from daily_judgments where user_id = p_user;       -- liga
+  delete from league_events where user_id = p_user;
+  delete from league_state where user_id = p_user;
+  delete from user_settings where user_id = p_user;
+  delete from user_notices where user_id = p_user;
+  delete from legacy_days where user_id = p_user;
+  delete from user_game where user_id = p_user;
+  if to_regclass('public.vice_slips') is not null then
+    execute 'delete from public.vice_slips where user_id = $1' using p_user;
+    execute 'delete from public.user_vices where user_id = $1' using p_user;
+  end if;
+  delete from habit_votes where voter_id = p_user;
+  update profiles set archetype = null, area_scores = '{}'::jsonb, quiz_answers = null, quiz_completed_at = null where id = p_user;
+  if g is not null then perform public.resolve_requests(g); end if;
+end $$;
+
+-- Lo que se va a borrar, para mostrarlo antes de confirmar.
+create or replace function public.reset_preview()
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'username', (select username from profiles where id = auth.uid()),
+    'habitos', (select count(*) from habits where user_id = auth.uid()),
+    'registros', (select count(*) from habit_logs where user_id = auth.uid()),
+    'fotos', (select count(*) from habit_logs where user_id = auth.uid() and photo_path is not null),
+    'vicios', (select count(*) from vices where user_id = auth.uid()),
+    'objetivos', (select count(*) from objectives where user_id = auth.uid()),
+    'cofres', (select count(*) from goals where user_id = auth.uid()),
+    'compras', (select count(*) from purchases where user_id = auth.uid()),
+    'propuestas', (select count(*) from change_requests where proposer_id = auth.uid()),
+    'votos', (select count(*) from change_votes where voter_id = auth.uid()),
+    'juicios', (select count(*) from daily_judgments where user_id = auth.uid()),
+    'liga', (select count(*) from league_events where user_id = auth.uid()),
+    'aportes_compartidos', (select count(*) from group_chest_entries where user_id = auth.uid()),
+    'grupo_creado', exists (select 1 from groups where created_by = auth.uid())
+  );
+$$;
+
+-- Reiniciar: confirmar escribiendo el nombre de usuario. Vuelve al cuestionario.
+create or replace function public.reset_my_data(p_confirm text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'No autenticado'; end if;
+  if p_confirm is distinct from (select username from profiles where id = auth.uid()) then
+    raise exception 'Para confirmar, escribí tu nombre de usuario exacto.';
+  end if;
+  perform public.wipe_game_data(auth.uid());
+end $$;
+
+-- Eliminar la cuenta: todo lo anterior + perfil + usuario de autenticación. No se puede deshacer.
+-- Grupo creado por la persona: pasa al miembro más antiguo; si queda vacío, se borra.
+-- Cofres compartidos creados por la persona: pasan al dueño del grupo (o al nuevo dueño).
+create or replace function public.delete_my_account(p_confirm text)
+returns void language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); g uuid; heir uuid; owner uuid;
+begin
+  if me is null then raise exception 'No autenticado'; end if;
+  if p_confirm is distinct from (select username from profiles where id = me) then
+    raise exception 'Para confirmar, escribí tu nombre de usuario exacto.';
+  end if;
+  perform public.wipe_game_data(me);
+  g := public.my_group(me);
+  if g is not null then
+    select created_by into owner from groups where id = g;
+    if owner = me then
+      select user_id into heir from group_members where group_id = g and user_id <> me order by joined_at, user_id limit 1;
+      if heir is null then
+        delete from groups where id = g;                    -- vacío: se borra (cascade)
+        g := null;
+      else
+        update groups set created_by = heir where id = g;
+        owner := heir;
+      end if;
+    end if;
+    if g is not null then
+      update group_chests set created_by = owner where group_id = g and created_by = me;
+      delete from group_members where group_id = g and user_id = me;
+      perform public.resolve_requests(g);
+    end if;
+  end if;
+  -- Otros grupos creados (no debería haber: un grupo por persona) quedan con el miembro más antiguo o se borran.
+  for g in select id from groups where created_by = me loop
+    select user_id into heir from group_members where group_id = g and user_id <> me order by joined_at limit 1;
+    if heir is null then delete from groups where id = g; else update groups set created_by = heir where id = g; end if;
+  end loop;
+  delete from auth.users where id = me;                      -- cascade: perfil y todo lo que cuelga de él
 end $$;
 
 -- ───────────── 16. Permisos de funciones ─────────────
@@ -1222,19 +1401,21 @@ revoke execute on function
   public.plan_for(uuid, date), public.slip_covered(uuid, date), public.day_score(uuid, date), public.day_points(uuid, date),
   public.clean_streak(uuid, date), public.unpaid_slip(uuid, date), public.coin_days(uuid), public.wallet_of(uuid),
   public.next_plan(uuid, uuid), public.apply_change(uuid), public.resolve_requests(uuid), public.seed_store(uuid),
-  public.on_group_created(), public.vice_multiplier(uuid, date), public.slip_penalty(uuid, date)
+  public.on_group_created(), public.vice_multiplier(uuid, date), public.slip_penalty(uuid, date),
+  public.level_of(uuid), public.wipe_game_data(uuid)
 from public, anon, authenticated;
 revoke execute on function
-  public.create_initial_plan(jsonb, jsonb, jsonb), public.set_vice_state(uuid, text), public.set_habit_done(uuid, boolean),
+  public.create_initial_plan(jsonb, jsonb, jsonb, int), public.set_vice_state(uuid, text), public.set_habit_done(uuid, boolean),
   public.create_group(text, int), public.join_group(text), public.propose_change(text, text, jsonb), public.vote_change(uuid, text),
   public.group_requests(uuid), public.buy_item(uuid, uuid, uuid, uuid), public.set_optin(uuid, boolean), public.my_day(),
   public.dismiss_notice(uuid), public.group_plans(uuid), public.group_leaderboard(uuid), public.group_activity(uuid, int),
-  public.area_radar(uuid), public.user_today(uuid), public.week_start(date), public.decide_pure(int, int, int, boolean)
+  public.area_radar(uuid), public.user_today(uuid), public.week_start(date), public.decide_pure(int, int, int, boolean),
+  public.reset_preview(), public.reset_my_data(text), public.delete_my_account(text)
 from public, anon;
 grant execute on function
-  public.create_initial_plan(jsonb, jsonb, jsonb), public.set_vice_state(uuid, text), public.set_habit_done(uuid, boolean),
+  public.create_initial_plan(jsonb, jsonb, jsonb, int), public.set_vice_state(uuid, text), public.set_habit_done(uuid, boolean),
   public.create_group(text, int), public.join_group(text), public.propose_change(text, text, jsonb), public.vote_change(uuid, text),
   public.group_requests(uuid), public.buy_item(uuid, uuid, uuid, uuid), public.set_optin(uuid, boolean), public.my_day(),
   public.dismiss_notice(uuid), public.group_plans(uuid), public.group_leaderboard(uuid), public.group_activity(uuid, int),
-  public.area_radar(uuid), public.user_today(uuid)
+  public.area_radar(uuid), public.user_today(uuid), public.reset_preview(), public.reset_my_data(text), public.delete_my_account(text)
 to authenticated;

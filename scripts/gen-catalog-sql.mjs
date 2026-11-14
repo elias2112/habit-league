@@ -80,6 +80,11 @@ const flat = {
   ...cfg.coins, ...cfg.time, ...cfg.rules,
   pillars: cfg.pillars,
   areaToPillar: cfg.areaToPillar,
+  xpPerLevel: cfg.levels.xpPerLevel,
+  strengthExercises: cfg.strength.exercises,
+  strengthTargets: Object.fromEntries(cfg.strength.exercises.map((e) => [e.id, e.targets])),
+  strengthWeight: cfg.strength.weight,
+  strengthDefaultLevel: cfg.strength.defaultLevel,
 }
 const jl = (v) => `'${JSON.stringify(v).replaceAll("'", "''")}'::jsonb`
 replaceBlock(M6, 'CONFIG3', [

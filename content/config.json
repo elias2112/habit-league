@@ -1,8 +1,12 @@
 {
-  "version": "3.0",
+  "version": "4.0",
   "note": "ÚNICO lugar de parámetros del juego (spec v3, reference/config.mjs). La app lo importa y `npm run catalog` lo copia a la base (game_config). El grupo puede cambiar valores por votación (group_config). [dueño] = lo dijo el dueño; [propuesta] = valor a calibrar con el testing.",
   "scoring": {
-    "severity": { "leve": 0.95, "normal": 0.9, "grave": 0.8 },
+    "severity": {
+      "leve": 0.95,
+      "normal": 0.9,
+      "grave": 0.8
+    },
     "multiplierFloor": 0.7,
     "maxCompletion": 1.5
   },
@@ -26,15 +30,47 @@
     "permitResetsCleanStreak": true,
     "minActiveHabits": 3,
     "maxObjectives": 3,
-    "groupScopeDefaultWeight": 2
+    "groupScopeDefaultWeight": 2,
+    "maxGoals": 3
   },
   "pillars": [
-    { "id": "cuerpo", "name": "Cuerpo", "icon": "💪", "color": "#FF6B6B" },
-    { "id": "mente", "name": "Mente", "icon": "🧠", "color": "#B4A8FF" },
-    { "id": "dinero", "name": "Dinero", "icon": "💰", "color": "#7BD88F" },
-    { "id": "habilidades", "name": "Habilidades", "icon": "🛠️", "color": "#5AA9FF" },
-    { "id": "creatividad", "name": "Creatividad", "icon": "🎨", "color": "#FF8FD0" },
-    { "id": "carrera", "name": "Carrera y estudios", "icon": "🎓", "color": "#4FD1C5", "provisional": true }
+    {
+      "id": "cuerpo",
+      "name": "Cuerpo",
+      "icon": "💪",
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "mente",
+      "name": "Mente",
+      "icon": "🧠",
+      "color": "#B4A8FF"
+    },
+    {
+      "id": "dinero",
+      "name": "Dinero",
+      "icon": "💰",
+      "color": "#7BD88F"
+    },
+    {
+      "id": "habilidades",
+      "name": "Habilidades",
+      "icon": "🛠️",
+      "color": "#5AA9FF"
+    },
+    {
+      "id": "creatividad",
+      "name": "Creatividad",
+      "icon": "🎨",
+      "color": "#FF8FD0"
+    },
+    {
+      "id": "carrera",
+      "name": "Carrera y estudios",
+      "icon": "🎓",
+      "color": "#4FD1C5",
+      "provisional": true
+    }
   ],
   "areaToPillar": {
     "cuerpo": "cuerpo",
@@ -43,5 +79,49 @@
     "mente": "mente",
     "foco": "mente",
     "social": null
+  },
+  "levels": {
+    "xpPerLevel": 300,
+    "note": "PROVISIONAL [propuesta]: experiencia por nivel; 300 = 3 días perfectos por nivel. Experiencia del día = puntos del día. El nivel no baja."
+  },
+  "strength": {
+    "note": "SUPUESTO (no decisión del dueño): el dueño dijo 10-30-50-100; se asumió repeticiones por día y las mismas cifras para los tres. Editable por ejercicio.",
+    "exercises": [
+      {
+        "id": "flexiones",
+        "name": "Flexiones",
+        "unit": "repeticiones",
+        "targets": [
+          10,
+          30,
+          50,
+          100
+        ]
+      },
+      {
+        "id": "sentadillas",
+        "name": "Sentadillas",
+        "unit": "repeticiones",
+        "targets": [
+          10,
+          30,
+          50,
+          100
+        ]
+      },
+      {
+        "id": "dominadas",
+        "name": "Dominadas",
+        "unit": "repeticiones",
+        "targets": [
+          10,
+          30,
+          50,
+          100
+        ]
+      }
+    ],
+    "weight": 1,
+    "defaultLevel": 0
   }
 }

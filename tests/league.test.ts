@@ -9,6 +9,7 @@ const FILES = [
   '../supabase/migrations/003_grupo_objetivos_fotos.sql',
   '../supabase/migrations/004_liga_juicio_cofre.sql',
   '../supabase/migrations/005_vicios.sql',
+  '../supabase/migrations/005b_respaldo.sql',
   '../supabase/migrations/006_v3_plan_monedas.sql',
 ]
 const STUB = `
