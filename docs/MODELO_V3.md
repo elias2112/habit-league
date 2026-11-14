@@ -1,4 +1,6 @@
-# Modelo de datos v3 — IMPLEMENTADO (migración 006, con OK del dueño del 2026-11-08)
+# Modelo de datos v3 + v4 — IMPLEMENTADO (migración 006; v4 con OK del dueño del 2026-11-14)
+
+> **v4 (2026-11-14):** no se migran datos (se borró la sección de migración y el congelamiento del legado; `legacy_days` queda vacía). Se agregan: respaldo `005b`, niveles derivados, bloques, fuerza base con `training_level` votable, plan inicial con deporte obligatorio y objetivos personalizados (meta, punto de partida, cofre), y `reset_my_data` / `delete_my_account` (grupo al miembro más antiguo o se borra si queda vacío; cofres compartidos al dueño del grupo; votos pendientes recalculados). Lo de abajo sobre "migración de datos existentes" y "legado sumado en el ranking" quedó sin efecto.
 
 Implementa `modifications/SPEC.md` (v3) con las respuestas del dueño del 2026-11-08. Código: `supabase/migrations/006_v3_plan_monedas.sql`, `src/game/*`, pruebas en `tests/v3.test.ts`, `tests/reference/*` y `tests/game.handcalc.test.ts`.
 

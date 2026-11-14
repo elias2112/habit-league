@@ -6,7 +6,7 @@ export type Scope = 'me' | 'group'
 export type ChangeKind =
   | 'habit.add' | 'habit.remove' | 'habit.weight' | 'habit.target'
   | 'vice.add' | 'vice.remove' | 'vice.weight' | 'vice.severity'
-  | 'objective.add' | 'objective.remove' | 'store.add' | 'store.update' | 'config.set'
+  | 'objective.add' | 'objective.remove' | 'store.add' | 'store.update' | 'config.set' | 'training.level'
 
 export interface ChangeRequest {
   id: string; proposer_id: string; proposer: string; scope: Scope; kind: ChangeKind
@@ -38,5 +38,6 @@ export function describeChange(r: Pick<ChangeRequest, 'kind' | 'payload' | 'priv
     case 'store.add': return `Tienda: agregar «${name}» a ${p.price} monedas`
     case 'store.update': return `Tienda: cambiar «${name}»${p.price != null ? ` a ${p.price} monedas` : ''}${p.weekly_limit !== undefined ? `, límite semanal ${p.weekly_limit ?? 'sin límite'}` : ''}`
     case 'config.set': return `Parámetro ${p.key} → ${JSON.stringify(p.value)}`
+    case 'training.level': return `Nivel de entrenamiento → ${p.name ?? p.level}`
   }
 }

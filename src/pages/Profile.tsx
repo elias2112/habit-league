@@ -8,6 +8,7 @@ import { archetypeById } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
 import { MyRadar } from '../components/MyRadar'
 import LeagueSettings from '../components/LeagueSettings'
+import AccountDanger from '../components/AccountDanger'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 
 export default function Profile() {
@@ -90,6 +91,8 @@ export default function Profile() {
       <LeagueSettings />
 
       <ChangePassword />
+
+      <AccountDanger />
 
       <button className="btn btn-ghost mt-3 w-full" onClick={() => supabase.auth.signOut()}>Cerrar sesión</button>
 

@@ -7,7 +7,10 @@ import { catalogById } from '../lib/quiz'
 import { useMyDay, type DayHabit, type DayVice } from '../lib/day'
 import { describeChange, propose, type ChangeKind, type ChangeRequest, type Scope } from '../lib/changes'
 import { useGroups } from '../lib/groups'
-import { CONFIG, type Severity } from '../game/config'
+import { CONFIG, STRENGTH, type Severity } from '../game/config'
+import { ONB } from '../lib/onboardingPlan'
+
+const TRAINING = ONB.training.options
 import { VICES } from '../lib/vices'
 import CatalogPicker from '../components/CatalogPicker'
 import Goals from '../components/Goals'
@@ -100,10 +103,13 @@ function Plan() {
         </section>
       )}
 
+      <TrainingLevel current={day.training_level} onSend={send} />
+
       <h2 className="mb-2 font-bold">Hábitos ({day.habits.length})</h2>
       <ul className="space-y-2">
         {day.habits.map((h) => (
           <li key={h.id} className="card">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">{BLOCK_LABEL[h.block]}</p>
             <button className="flex w-full items-start gap-3 text-left" onClick={() => setPanel(panel?.kind === 'habit' && panel.h.id === h.id ? null : { kind: 'habit', h })}>
               <PillarIcon pillar={h.pillar} />
               <span className="min-w-0 flex-1">
@@ -178,7 +184,43 @@ function Plan() {
   )
 }
 
+const BLOCK_LABEL: Record<string, string> = { fuerza: '💪 Fuerza base', deporte: '🏃 Deporte o gimnasio', objetivo: '🎯 De un objetivo', general: '✨ General' }
+
+function TrainingLevel({ current, onSend }: { current: number | null; onSend: Send }) {
+  const [open, setOpen] = useState(false)
+  const lvl = current ?? CONFIG.strengthDefaultLevel
+  return (
+    <section className="card mb-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="font-semibold">Nivel de entrenamiento: {TRAINING[lvl]?.text ?? lvl}</p>
+          <p className="text-xs text-muted">{STRENGTH.map((e) => `${e.targets[lvl]} ${e.name.toLowerCase()}`).join(' · ')} por día</p>
+        </div>
+        <button className="btn btn-ghost min-h-9 shrink-0 px-3 py-1 text-sm" onClick={() => setOpen(!open)}>Cambiar</button>
+      </div>
+      {open && (
+        <div className="mt-3 space-y-2 border-t border-line pt-3">
+          <p className="text-xs text-muted">Se vota como cualquier cambio y rige desde mañana: hoy no se puede bajar la meta para llegar a 100.</p>
+          {TRAINING.map((o) => (
+            <button key={o.level} disabled={o.level === lvl} className="btn btn-ghost w-full justify-between text-left text-sm"
+              onClick={() => onSend('me', 'training.level', { level: o.level, name: o.text })}>
+              <span>{o.text}</span><span className="text-xs text-muted">{STRENGTH.map((e) => e.targets[o.level]).join(' / ')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function HabitChange({ h, canRemove, onSend }: { h: DayHabit; canRemove: boolean; onSend: Send }) {
+  if (h.block === 'fuerza') {
+    return <p className="mt-3 border-t border-line pt-3 text-sm text-muted">La fuerza base es para todos: su meta cambia con tu nivel de entrenamiento (arriba).</p>
+  }
+  return <HabitChangeForm h={h} canRemove={canRemove} onSend={onSend} />
+}
+
+function HabitChangeForm({ h, canRemove, onSend }: { h: DayHabit; canRemove: boolean; onSend: Send }) {
   const [w, setW] = useState(h.weight)
   const [target, setTarget] = useState(h.target != null ? String(h.target) : '')
   const [scope, setScope] = useState<Scope>('me')
@@ -239,14 +281,22 @@ function CustomAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void })
   const [target, setTarget] = useState(500)
   const [unit, setUnit] = useState('')
   const [scope, setScope] = useState<Scope>('me')
+  const [block, setBlock] = useState<'general' | 'deporte'>('general')
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    void onSend(scope, 'habit.add', { name: name.trim(), criterion: criterion.trim() || null, pillar, weight: w, ...(measurable ? { target, unit: unit.trim() } : {}) })
+    void onSend(scope, 'habit.add', { name: name.trim(), criterion: criterion.trim() || null, pillar, weight: w, block, ...(measurable ? { target, unit: unit.trim() } : {}) })
   }
   return (
     <form onSubmit={submit} className="card mt-3 space-y-3">
       <div><label className="label" htmlFor="cn">Nombre</label><input id="cn" className="input" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} /></div>
       <div><label className="label" htmlFor="cc">¿Cuándo cuenta como hecho? (opcional)</label><input id="cc" className="input" maxLength={160} value={criterion} onChange={(e) => setCriterion(e.target.value)} /></div>
+      <div>
+        <span className="label">Tipo</span>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className={`btn text-sm ${block === 'general' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setBlock('general')}>✨ General</button>
+          <button type="button" className={`btn text-sm ${block === 'deporte' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => { setBlock('deporte'); setPillar('cuerpo') }}>🏃 Deporte o gimnasio</button>
+        </div>
+      </div>
       <div><label className="label" htmlFor="cp">Pilar</label><PillarSelect id="cp" value={pillar} onChange={setPillar} /></div>
       <WeightPicker value={w} onChange={setW} />
       <label className="flex items-center gap-2 text-sm">

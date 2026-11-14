@@ -1,0 +1,125 @@
+{
+  "version": "0.1-borrador",
+  "status": "BORRADOR — pendiente de revisión del dueño (docs/PROPUESTA_CONTENIDO_V4.md). No publicar sin OK.",
+  "note": "Textos del cuestionario v4. Objetivos a partir de las plantillas de content/goals.json más 'Dejar de fumar'. Sin datos, estudios ni plazos inventados: los plazos los pone la persona.",
+  "clearGoal": {
+    "text": "¿Tenés un objetivo claro para estos días?",
+    "yes": "Sí, sé lo que quiero",
+    "no": "Todavía no"
+  },
+  "area": {
+    "text": "¿Qué parte de tu vida querés mejorar primero?",
+    "hint": "Elegí una. Después vemos objetivos concretos."
+  },
+  "friction": {
+    "text": "¿Qué te cuesta más hoy?",
+    "options": [
+      { "id": "empezar", "text": "Empezar" },
+      { "id": "constancia", "text": "Ser constante" },
+      { "id": "tiempo", "text": "Encontrar tiempo" },
+      { "id": "rumbo", "text": "Saber por dónde empezar" }
+    ]
+  },
+  "suggest": {
+    "text": "Te proponemos estos objetivos",
+    "hint": "Elegí al menos uno (hasta 3). Después los ajustamos con tus números."
+  },
+  "pickGoals": {
+    "text": "¿Qué querés lograr? Elegí de 1 a 3",
+    "hint": "Podés escribir uno propio con «Otro objetivo»."
+  },
+  "objectives": [
+    {
+      "id": "ahorrar",
+      "name": "Ahorrar para algo",
+      "example": "Comprar un celular",
+      "pillar": "dinero",
+      "tag": "ahorrar",
+      "template": "ahorro",
+      "questions": [
+        { "id": "title", "type": "text", "text": "¿Para qué querés ahorrar?", "placeholder": "Ej.: un celular" },
+        { "id": "target", "type": "number", "text": "¿Cuánto necesitás juntar?", "unit": "€" },
+        { "id": "start", "type": "number", "text": "¿Cuánto tenés ya ahorrado para esto?", "unit": "€", "default": 0 },
+        { "id": "deadline", "type": "date", "text": "¿Para cuándo? (opcional)", "optional": true }
+      ]
+    },
+    {
+      "id": "leer",
+      "name": "Leer",
+      "example": "Leer un libro por semana",
+      "pillar": "mente",
+      "tag": "leer",
+      "template": "lectura",
+      "questions": [
+        { "id": "amount", "type": "number", "text": "¿Cuántos libros querés leer?", "default": 4 },
+        { "id": "perItem", "type": "number", "text": "Páginas por libro (aprox.)", "default": 250 },
+        { "id": "start", "type": "number", "text": "¿Cuántas páginas leés hoy por día?", "unit": "páginas", "default": 0 },
+        { "id": "deadline", "type": "date", "text": "¿Para cuándo? (opcional)", "optional": true }
+      ]
+    },
+    {
+      "id": "escribir",
+      "name": "Escribir",
+      "example": "Escribir un libro",
+      "pillar": "creatividad",
+      "tag": "escribir",
+      "template": "escritura",
+      "questions": [
+        { "id": "amount", "type": "number", "text": "¿Cuántas palabras en total?", "default": 50000 },
+        { "id": "start", "type": "number", "text": "¿Cuántas palabras escribís hoy por día?", "unit": "palabras", "default": 0 },
+        { "id": "deadline", "type": "date", "text": "¿Para cuándo? (opcional)", "optional": true }
+      ]
+    },
+    {
+      "id": "dejar-fumar",
+      "name": "Dejar de fumar",
+      "example": "Dejar el cigarrillo o el vaper",
+      "pillar": "cuerpo",
+      "tag": "dejar-fumar",
+      "template": "dejar-fumar",
+      "questions": [
+        { "id": "start", "type": "number", "text": "¿Cuántos cigarrillos (o sesiones de vaper) por día fumás hoy?", "unit": "por día", "default": 0 }
+      ],
+      "habits": ["fumar_menos", "dia_sin_fumar"],
+      "vice": { "name": "Fumar o vapear", "suggestion_id": "fumar", "severity": "normal" }
+    },
+    {
+      "id": "otro",
+      "name": "Otro objetivo",
+      "example": "Aprender a tocar la guitarra",
+      "pillar": null,
+      "tag": null,
+      "template": "general",
+      "questions": [
+        { "id": "title", "type": "text", "text": "¿Qué querés lograr?", "placeholder": "Ej.: aprender a tocar la guitarra" },
+        { "id": "pillar", "type": "pillar", "text": "¿En qué parte de tu vida entra?" },
+        { "id": "unit", "type": "text", "text": "¿Cómo vas a medir el avance? (opcional)", "placeholder": "Ej.: minutos, páginas, clases", "optional": true },
+        { "id": "daily", "type": "number", "text": "¿Cuánto por día? (opcional)", "optional": true },
+        { "id": "start", "type": "text", "text": "¿Desde dónde arrancás? (opcional)", "placeholder": "Ej.: nunca toqué", "optional": true }
+      ]
+    }
+  ],
+  "areaObjectives": {
+    "cuerpo": ["dejar-fumar", "otro"],
+    "mente": ["leer", "otro"],
+    "dinero": ["ahorrar", "otro"],
+    "habilidades": ["leer", "otro"],
+    "creatividad": ["escribir", "otro"],
+    "carrera": ["leer", "otro"]
+  },
+  "training": {
+    "text": "¿Cuánto entrenás hoy?",
+    "hint": "Define tu fuerza base diaria (flexiones, sentadillas y dominadas). Se pueden hacer en varias series. No es un consejo médico ni de entrenamiento.",
+    "options": [
+      { "level": 0, "text": "No entreno" },
+      { "level": 1, "text": "Me muevo a veces" },
+      { "level": 2, "text": "Entreno 1 o 2 veces por semana" },
+      { "level": 3, "text": "Entreno 3 o más veces por semana" }
+    ]
+  },
+  "sport": {
+    "text": "¿Qué deporte o actividad física vas a hacer?",
+    "hint": "Todos tienen uno. Escribí el tuyo y, si querés, una meta con número.",
+    "placeholder": "Ej.: correr, gimnasio, fútbol, natación"
+  }
+}

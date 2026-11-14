@@ -112,7 +112,7 @@ export default function Ranking() {
                       {r.display_name || r.username}
                       {isMe && <span className="ml-1.5 text-xs font-semibold text-primary">(vos)</span>}
                     </span>
-                    <span className="block truncate text-xs text-muted">{arch ? arch.name : `@${r.username}`}</span>
+                    <span className="block truncate text-xs text-muted">Nivel {r.level ?? 0}{arch ? ` · ${arch.name}` : ` · @${r.username}`}</span>
                   </span>
                   {Number(r.multiplier) < 1 && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-xs font-bold text-danger" title="Multiplicador de hoy por recaídas sin permiso">{fmtMult(Number(r.multiplier))}</span>}
                   <Flame n={r.streak} />

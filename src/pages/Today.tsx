@@ -19,6 +19,12 @@ const CheckIcon = () => (
     <path d="M5 13l4 4L19 7" />
   </svg>
 )
+const BLOCKS = [
+  { id: 'fuerza', title: '💪 Fuerza base' },
+  { id: 'deporte', title: '🏃 Deporte o gimnasio' },
+  { id: 'objetivo', title: '🎯 Tus objetivos' },
+  { id: 'general', title: '✨ Generales' },
+] as const
 const fmtMult = (m: number) => `×${m.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`
 
 export default function Today() {
@@ -120,6 +126,16 @@ export default function Today() {
         }} />
       )}
 
+      {/* Nivel (experiencia = suma de tus puntos diarios; valores provisionales) */}
+      <section className="card mb-3">
+        <div className="flex items-baseline justify-between">
+          <span className="text-2xl font-black">Nivel {day.level.level}</span>
+          <span className="text-xs tabular-nums text-muted">{Math.round(day.level.xpIntoLevel)} / {day.level.xpForNext} de experiencia</span>
+        </div>
+        <div className="mt-2"><Bar value={day.level.xpIntoLevel} max={day.level.xpForNext} className="bg-primary" /></div>
+        <p className="mt-1 text-xs text-muted">Cada punto del día suma experiencia. El nivel nunca baja.</p>
+      </section>
+
       {/* Puntaje y monedas */}
       <section className="card mb-5">
         <div className="flex items-baseline justify-between">
@@ -159,11 +175,19 @@ export default function Today() {
               Necesitás al menos {MIN_ACTIVE_HABITS} hábitos. <Link to="/habitos" className="font-semibold text-primary underline">Proponé uno</Link>
             </p>
           )}
-          <ul className="space-y-2.5">
-            {day.habits.map((h) => (
-              <HabitRow key={h.id} h={h} busy={busy.has(h.id)} onToggle={() => toggle(h)} onAdd={(d) => add(h, d)} onPhoto={(f) => photo(h, f)} />
-            ))}
-          </ul>
+          {BLOCKS.map((b) => {
+            const hs = day.habits.filter((h) => h.block === b.id)
+            if (hs.length === 0) return null
+            return (
+              <section key={b.id} className="mb-5">
+                <h2 className="mb-2 font-bold">{b.title}</h2>
+                {b.id === 'fuerza' && <p className="mb-2 text-xs text-muted">Para todos, según tu nivel de entrenamiento. Se puede hacer en varias series. No es consejo médico ni de entrenamiento.</p>}
+                <ul className="space-y-2.5">
+                  {hs.map((h) => <HabitRow key={h.id} h={h} busy={busy.has(h.id)} onToggle={() => toggle(h)} onAdd={(d) => add(h, d)} onPhoto={(f) => photo(h, f)} />)}
+                </ul>
+              </section>
+            )
+          })}
 
           {day.vices.length > 0 && (
             <section className="mt-6">

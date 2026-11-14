@@ -68,6 +68,7 @@ export interface LeaderboardRow {
   pct: number | null
   streak: number
   multiplier: number
+  level: number
 }
 
 export interface FeedRow {

@@ -8,7 +8,9 @@ import type { Severity } from '../game/config'
 export interface DayHabit {
   id: string; name: string; criterion: string | null; pillar: string | null; catalog_id: string | null; unit: string | null
   private: boolean; weight: number; target: number | null; count: number; photo_path: string | null
+  block: 'general' | 'objetivo' | 'deporte' | 'fuerza'; strength_id: string | null; objective_id: string | null
 }
+export interface Level { xp: number; level: number; xpIntoLevel: number; xpForNext: number; progress: number }
 export interface DayVice { id: string; name: string; weight: number; severity: Severity; state: ViceState; covered: boolean; clean_days: number }
 export interface Wallet { balance: number; pool_this_week: number; today_credit: number; today_multiplier: number; streak: number }
 export interface MyDay {
@@ -20,6 +22,8 @@ export interface MyDay {
   vices: DayVice[]
   objectives: { id: string; title: string; tag: string | null; goal_id: string | null }[]
   tomorrow_changes: boolean
+  training_level: number | null
+  level: Level
   notices: { id: string; text: string }[]
 }
 
@@ -34,6 +38,7 @@ export function useMyDay() {
     const d = data as MyDay
     d.score = Object.fromEntries(Object.entries(d.score).map(([k, v]) => [k, n(v)])) as MyDay['score']
     d.wallet = Object.fromEntries(Object.entries(d.wallet).map(([k, v]) => [k, n(v)])) as unknown as Wallet
+    d.level = Object.fromEntries(Object.entries(d.level ?? {}).map(([k, v]) => [k, n(v)])) as unknown as Level
     d.habits = d.habits.map((h) => ({ ...h, target: h.target == null ? null : n(h.target), count: n(h.count) }))
     setDay(d)
     setError(null)
