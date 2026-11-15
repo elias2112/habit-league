@@ -2,7 +2,9 @@
 import { describe, expect, it } from 'vitest'
 import { OBJECTIVES, buildObjective, objectiveDef, suggestGeneral } from '../src/lib/onboardingPlan'
 import { catalogById } from '../src/lib/quiz'
-import { PILLARS } from '../src/game/config'
+import { CONFIG, PILLARS } from '../src/game/config'
+import { STRENGTH_RULES, ST, fill } from '../src/lib/strengthText'
+import { ONB } from '../src/lib/onboardingPlan'
 
 const today = '2026-11-14'
 
@@ -49,5 +51,27 @@ describe('objetivos del cuestionario', () => {
   it('generales por defecto: Hacer la cama y Meditar (sin repetir lo que ya está)', () => {
     expect(suggestGeneral().map((x) => x.name)).toEqual(['Hacer la cama', 'Respirar o meditar 5 minutos'])
     expect(suggestGeneral(new Set(['hacer_cama'])).map((x) => x.catalog_id)).toEqual(['respirar_5'])
+  })
+})
+
+describe('textos del cuestionario v4.2', () => {
+  it('las reglas de la fuerza base salen de config, sin marcas sin reemplazar', () => {
+    for (const r of STRENGTH_RULES) expect(r).not.toMatch(/\{\w+\}/)
+    expect(STRENGTH_RULES.join(' ')).toContain(String(CONFIG.extraReps))
+    expect(fill(ONB.areas.hint)).not.toMatch(/\{\w+\}/)
+  })
+
+  it('los 5 chistes del dueño, tal cual', () => {
+    expect(ST.jokes).toHaveLength(5)
+    expect(ST.jokes[0]).toBe('¿Seguro? Las flexiones no muerden… bueno, un poquito. ¿Arrancamos con 10?')
+  })
+
+  it('la pantalla de áreas tiene las 6 áreas de config (precios por área) y No/Poco/Mucho', () => {
+    expect(ONB.areas.items.map((a) => a.id).sort()).toEqual(Object.keys(CONFIG.areas).sort())
+    expect(ONB.areas.options.map((o) => o.id)).toEqual(['no', 'poco', 'mucho'])
+  })
+
+  it('cuatro secciones: Objetivos, Fuerza, Vos, Hábitos', () => {
+    expect(ONB.sections.map((x) => x.name)).toEqual(['Objetivos', 'Fuerza', 'Vos', 'Hábitos'])
   })
 })

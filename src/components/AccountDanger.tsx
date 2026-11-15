@@ -7,7 +7,7 @@ import { ErrorBox } from './ui'
 type Mode = null | 'reset' | 'delete'
 interface Preview {
   username: string; habitos: number; registros: number; fotos: number; vicios: number; objetivos: number; cofres: number
-  compras: number; propuestas: number; votos: number; juicios: number; liga: number; aportes_compartidos: number; grupo_creado: boolean
+  compras: number; propuestas: number; votos: number; juicios: number; aportes_compartidos: number; grupo_creado: boolean
 }
 
 /** Borra las fotos propias de Storage (la base no las alcanza por cascada). */
@@ -64,7 +64,7 @@ export default function AccountDanger() {
     [preview.habitos, 'hábitos y su historial'], [preview.registros, 'registros diarios (salen del feed)'], [preview.fotos, 'fotos'],
     [preview.vicios, 'vicios'], [preview.objetivos, 'objetivos'], [preview.cofres, 'cofres de ahorro personales'],
     [preview.compras, 'compras (y la billetera)'], [preview.propuestas, 'propuestas'], [preview.votos, 'votos'],
-    [preview.juicios, 'Juicios de la liga'], [preview.liga, 'movimientos de la liga'],
+    [preview.juicios, 'Juicios de la mañana'],
   ] as const : []
 
   return (

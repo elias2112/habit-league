@@ -4,17 +4,10 @@ import { PGlite } from '@electric-sql/pglite'
 import { readFileSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import habitsJson from '../content/habits.json'
+import { MIGRATIONS } from './harness'
 
 // Mismo orden que en Supabase: esquema base y luego migraciones.
-const FILES = [
-  '../supabase/schema.sql',
-  '../supabase/migrations/002_quiz_personas_puntos.sql',
-  '../supabase/migrations/003_grupo_objetivos_fotos.sql',
-  '../supabase/migrations/004_liga_juicio_cofre.sql',
-  '../supabase/migrations/005_vicios.sql',
-  '../supabase/migrations/005b_respaldo.sql',
-  '../supabase/migrations/006_v3_plan_monedas.sql',
-]
+const FILES = MIGRATIONS
 const schema = FILES.map((p) => readFileSync(new URL(p, import.meta.url), 'utf8')).join('\n')
 
 const STUB = `
@@ -368,12 +361,7 @@ describe('objetivos', () => {
 })
 
 describe('migraciones', () => {
-  it('se pueden volver a ejecutar sin errores (002 a 006 con el respaldo, en orden)', async () => {
-    await db.exec(readFileSync(new URL(FILES[1], import.meta.url), 'utf8'))
-    await db.exec(readFileSync(new URL(FILES[2], import.meta.url), 'utf8'))
-    await db.exec(readFileSync(new URL(FILES[3], import.meta.url), 'utf8'))
-    await db.exec(readFileSync(new URL(FILES[4], import.meta.url), 'utf8'))
-    await db.exec(readFileSync(new URL(FILES[5], import.meta.url), 'utf8'))
-    await db.exec(readFileSync(new URL(FILES[6], import.meta.url), 'utf8'))
+  it('se pueden volver a ejecutar sin errores (002 a 007, en orden)', async () => {
+    for (const file of FILES.slice(1)) await db.exec(readFileSync(new URL(file, import.meta.url), 'utf8'))
   })
 })

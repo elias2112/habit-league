@@ -1,8 +1,8 @@
-// @ts-nocheck — copia literal de modifications/reference/*.test.mjs (fuente de verdad del dueño); solo cambian los imports.
+// @ts-nocheck — copia literal de modifications/reference/approval.test.mjs (fuente de verdad del dueño); solo cambian los imports.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { decide } from '../../src/game/approval';
-import { snapshotFor, planForDay, nextDay } from '../../src/game/approval';
+import { snapshotFor, planForDay, nextDay } from '../../src/game/plan';
 
 const M = ['ana', 'beto', 'carla', 'dani'];
 const d = (votes, windowElapsed = false, members = M) => decide({ proposer: 'ana', members, votes, windowElapsed });

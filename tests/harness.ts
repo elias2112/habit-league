@@ -10,6 +10,9 @@ export const MIGRATIONS = [
   '../supabase/migrations/005_vicios.sql',
   '../supabase/migrations/005b_respaldo.sql',
   '../supabase/migrations/006_v3_plan_monedas.sql',
+  '../supabase/migrations/007a_respaldo.sql',
+  '../supabase/migrations/007_v42.sql',
+  '../supabase/migrations/008_quitar_liga.sql',
 ]
 export const readMigration = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 

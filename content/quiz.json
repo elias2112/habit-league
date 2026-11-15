@@ -1,6 +1,6 @@
 {
-  "version": "0.2",
-  "note": "Quiz propio, NO es un test psicométrico validado. Textos editables.",
+  "version": "0.4",
+  "note": "Quiz propio, NO es un test psicométrico validado. Textos editables. v4.2 (2026-11-15): q10 y q12 son preguntas conductuales rápidas (mismas letras y valores 0–3, eje estructura). Las 4 preguntas directas (q21–q24) se reemplazaron por la pantalla de áreas del cuestionario (content/onboarding.json → areas), privada.",
   "axes": {
     "E": "Estructura: alto = necesita guía y reglas claras",
     "M": "Momentum: alto = constante hoy",
@@ -325,26 +325,26 @@
       "id": "q10",
       "section": "estructura",
       "type": "single",
-      "text": "Cuando tengo el día libre, normalmente…",
+      "text": "¿Usás listas o alarmas para acordarte de cosas?",
       "options": [
         {
           "id": "a",
-          "text": "Improviso y me funciona",
+          "text": "Nunca",
           "value": 0
         },
         {
           "id": "b",
-          "text": "Organizo bastante bien",
+          "text": "A veces",
           "value": 1
         },
         {
           "id": "c",
-          "text": "Armo una lista pero me cuesta seguirla",
+          "text": "Seguido",
           "value": 2
         },
         {
           "id": "d",
-          "text": "Me cuesta decidir por dónde empezar",
+          "text": "Siempre",
           "value": 3
         }
       ]
@@ -381,26 +381,26 @@
       "id": "q12",
       "section": "estructura",
       "type": "single",
-      "text": "Un recordatorio diario en la app me parecería…",
+      "text": "Cuando arrancás algo nuevo, ¿buscás instrucciones primero?",
       "options": [
         {
           "id": "a",
-          "text": "Molesto",
+          "text": "No, me tiro de cabeza",
           "value": 0
         },
         {
           "id": "b",
-          "text": "Indiferente",
+          "text": "A veces",
           "value": 1
         },
         {
           "id": "c",
-          "text": "Útil",
+          "text": "Casi siempre",
           "value": 2
         },
         {
           "id": "d",
-          "text": "Imprescindible",
+          "text": "Siempre, paso a paso",
           "value": 3
         }
       ]
@@ -628,137 +628,6 @@
           "value": 3
         }
       ]
-    },
-    {
-      "id": "q21",
-      "section": "directas",
-      "type": "single",
-      "text": "¿Fumás o vapeás?",
-      "options": [
-        {
-          "id": "a",
-          "text": "No",
-          "suggest": []
-        },
-        {
-          "id": "b",
-          "text": "A veces, en salidas",
-          "suggest": [
-            "dia_sin_fumar"
-          ]
-        },
-        {
-          "id": "c",
-          "text": "Todos los días",
-          "suggest": [],
-          "vice": "fumar"
-        },
-        {
-          "id": "d",
-          "text": "Todos los días y quiero dejar",
-          "suggest": [
-            "fumar_menos"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "q22",
-      "section": "directas",
-      "type": "single",
-      "text": "¿Cuántos días por semana tomás alcohol?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Nunca o casi nunca",
-          "suggest": []
-        },
-        {
-          "id": "b",
-          "text": "1 o 2 días",
-          "suggest": []
-        },
-        {
-          "id": "c",
-          "text": "3 o 4 días",
-          "suggest": [
-            "dia_sin_alcohol"
-          ]
-        },
-        {
-          "id": "d",
-          "text": "5 o más días",
-          "suggest": [
-            "max_2_tragos"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "q23",
-      "section": "directas",
-      "type": "single",
-      "text": "¿Cuántas horas por día pasás en redes sociales?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Menos de 1 hora",
-          "suggest": []
-        },
-        {
-          "id": "b",
-          "text": "Entre 1 y 2 horas",
-          "suggest": []
-        },
-        {
-          "id": "c",
-          "text": "Entre 2 y 4 horas",
-          "suggest": [
-            "redes_2h"
-          ]
-        },
-        {
-          "id": "d",
-          "text": "Más de 4 horas",
-          "suggest": [
-            "redes_2h",
-            "celular_manana"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "q24",
-      "section": "directas",
-      "type": "single",
-      "text": "¿Cuántas veces por semana pedís delivery o comida rápida?",
-      "options": [
-        {
-          "id": "a",
-          "text": "Nunca",
-          "suggest": []
-        },
-        {
-          "id": "b",
-          "text": "1 o 2 veces",
-          "suggest": []
-        },
-        {
-          "id": "c",
-          "text": "3 o 4 veces",
-          "suggest": [
-            "sin_delivery"
-          ]
-        },
-        {
-          "id": "d",
-          "text": "5 o más veces",
-          "suggest": [
-            "sin_delivery"
-          ]
-        }
-      ]
     }
-  ],
-  "direct_note": "Preguntas directas (q21-q24): no cambian arquetipo ni áreas; solo agregan sugerencias al paquete (suggest = hábitos, vice = vicio a declarar). Las respuestas son privadas (solo las ve quien responde)."
+  ]
 }

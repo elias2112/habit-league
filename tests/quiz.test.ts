@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import vectors from '../content/test_vectors.json'
-import vicesJson from '../content/vices.json'
-import { ARCHETYPES, CATALOG, QUESTIONS, computeProfile, directSuggestions, directVices, pointsFor, type Answers } from '../src/lib/quiz'
+import { ARCHETYPES, CATALOG, QUESTIONS, computeProfile, pointsFor, type Answers } from '../src/lib/quiz'
 import { detectKind, planGoal } from '../src/lib/goals'
 
 describe('quiz: vectores de content/test_vectors.json', () => {
@@ -13,9 +12,9 @@ describe('quiz: vectores de content/test_vectors.json', () => {
 })
 
 describe('quiz: consistencia del contenido', () => {
-  it('24 preguntas (20 de perfil + 4 directas) y 8 arquetipos que cubren todas las combinaciones', () => {
-    expect(QUESTIONS).toHaveLength(24)
-    expect(QUESTIONS.filter((q) => q.section === 'directas')).toHaveLength(4)
+  it('20 preguntas de perfil (las 4 directas pasaron a la pantalla de áreas) y 8 arquetipos que cubren todas las combinaciones', () => {
+    expect(QUESTIONS).toHaveLength(20)
+    expect(QUESTIONS.filter((q) => q.section === 'directas')).toHaveLength(0)
     const codes = ARCHETYPES.map((a) => a.code).sort()
     expect(codes).toEqual(['EMR', 'EMr', 'EmR', 'Emr', 'eMR', 'eMr', 'emR', 'emr'].sort())
   })
@@ -45,26 +44,26 @@ describe('pointsFor', () => {
   })
 })
 
-describe('preguntas directas', () => {
-  it('no cambian arquetipo ni paquete; solo agregan sugerencias', () => {
-    const base = { ...(vectors[0].answers as Answers) }
-    const withDirect: Answers = { ...base, q21: 'c', q22: 'd', q23: 'd', q24: 'a' }
-    expect(computeProfile(withDirect)).toEqual(computeProfile(base))
-    expect(directSuggestions(withDirect)).toEqual(['max_2_tragos', 'redes_2h', 'celular_manana'])
-    expect(directVices(withDirect)).toEqual(['fumar'])
-    expect(directSuggestions({ ...base, q21: 'd' })).toEqual(['fumar_menos'])
-    expect(directVices({ ...base, q21: 'd' })).toEqual([])
-    expect(directSuggestions(base)).toEqual([])
+describe('eje estructura: q10 y q12 (v4.2)', () => {
+  // El diff de los vectores da vacío porque las letras y los valores no cambiaron; esto cubre el valor de cada opción.
+  it('q10 y q12 son del eje estructura y valen a=0, b=1, c=2, d=3', () => {
+    for (const id of ['q10', 'q12']) {
+      const q = QUESTIONS.find((x) => x.id === id)!
+      expect(q.section).toBe('estructura')
+      expect(q.options.map((o) => [o.id, o.value])).toEqual([['a', 0], ['b', 1], ['c', 2], ['d', 3]])
+    }
+    expect(QUESTIONS.find((x) => x.id === 'q10')!.options[3].text).toBe('Siempre')
   })
 
-  it('los vicios sugeridos existen en content/vices.json', () => {
-    const ids = vicesJson.vices.map((v) => v.id)
-    for (const q of QUESTIONS) for (const o of q.options) if (o.vice) expect(ids).toContain(o.vice)
-  })
-
-  it('los hábitos sugeridos existen y los de vicios no entran solos al paquete', () => {
-    for (const q of QUESTIONS.filter((x) => x.section === 'directas'))
-      for (const o of q.options) for (const id of o.suggest ?? []) expect(CATALOG.find((h) => h.id === id)?.auto).toBe(false)
+  it('d en q10 suma 3 al eje estructura (E): pasar de a a d cambia la clasificación de e a E', () => {
+    const base = { ...(vectors[0].answers as Answers) }                        // todo en el valor más bajo: código emr
+    const r0 = computeProfile(base)
+    const r1 = computeProfile({ ...base, q10: 'd' })
+    expect(r1.axes.E - r0.axes.E).toBe(3)
+    expect(r1.axes.M).toBe(r0.axes.M)
+    const all = computeProfile({ ...base, q9: 'd', q10: 'd', q11: 'd', q12: 'd' })
+    expect(all.code[0]).toBe('E')
+    expect(r0.code[0]).toBe('e')
   })
 })
 

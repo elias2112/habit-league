@@ -1,4 +1,4 @@
-// @ts-nocheck — copia literal de modifications/reference/*.test.mjs (fuente de verdad del dueño); solo cambian los imports.
+// @ts-nocheck — copia literal de modifications/reference/coins.test.mjs (fuente de verdad del dueño); solo cambian los imports.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { dailyThresholdCoins, multiplierFor, dropOneStep, dayCoins, weeklyPoolCoins } from '../../src/game/coins';

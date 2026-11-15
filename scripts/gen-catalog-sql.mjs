@@ -70,9 +70,11 @@ replaceBlock('supabase/migrations/005_vicios.sql', 'VICES', [
 ].join('\n'))
 console.log(`✓ ${vj.vices.length} vicios → 005`)
 
-// ── 006: configuración v3, catálogo con pilares y tienda
+// ── 006: catálogo con pilares y tienda; 007: configuración
 const M6 = 'supabase/migrations/006_v3_plan_monedas.sql'
 const cfg = JSON.parse(readFileSync('content/config.json', 'utf8'))
+const M7 = 'supabase/migrations/007_v42.sql'
+// Configuración plana, con las mismas claves que reference/config.mjs (y src/game/config.ts).
 const flat = {
   severity: cfg.scoring.severity,
   multiplierFloor: cfg.scoring.multiplierFloor,
@@ -82,17 +84,36 @@ const flat = {
   areaToPillar: cfg.areaToPillar,
   xpPerLevel: cfg.levels.xpPerLevel,
   strengthExercises: cfg.strength.exercises,
-  strengthTargets: Object.fromEntries(cfg.strength.exercises.map((e) => [e.id, e.targets])),
   strengthWeight: cfg.strength.weight,
-  strengthDefaultLevel: cfg.strength.defaultLevel,
+  strengthTargetStep: cfg.strength.targetStep,
+  strengthTargetMax: cfg.strength.targetMax,
+  strengthLevelCapStep: cfg.strength.levelCapStep,
+  strengthLevelCapBonus: cfg.strength.levelCapBonus,
+  strengthRewardBase: cfg.strength.rewardBase,
+  strengthRewardDivisor: cfg.strength.rewardDivisor,
+  strengthEasyTarget: cfg.strength.easyTarget,
+  strengthEasyVariants: cfg.strength.easyVariants,
+  compound: cfg.strength.compound,
+  compoundMissRate: cfg.strength.compoundMissRate,
+  forgiveRatio: cfg.strength.forgiveRatio,
+  extraReps: cfg.strength.extraReps,
+  rankPoints: cfg.ranks.rankPoints,
+  ranks: cfg.ranks.list,
+  areaPriceMultiplier: cfg.storeAreas.areaPriceMultiplier,
+  areas: cfg.storeAreas.areas,
+  rankingCountsPersonalHabits: cfg.ranking.rankingCountsPersonalHabits,
+  personalHabitsGiveExp: cfg.ranking.personalHabitsGiveExp,
+  chestMilestones: cfg.chests.milestones,
+  chestWeeklySafeBonus: cfg.chests.weeklySafeBonus,
 }
 const jl = (v) => `'${JSON.stringify(v).replaceAll("'", "''")}'::jsonb`
-replaceBlock(M6, 'CONFIG3', [
+replaceBlock(M6, 'CONFIG3', '-- La configuración se carga en la 007 (bloque CONFIG4).')
+replaceBlock(M7, 'CONFIG4', [
   'insert into public.game_config (key, value) values',
   Object.entries(flat).map(([k, v]) => `  (${q(k)}, ${jl(v)})`).join(',\n'),
   'on conflict (key) do update set value = excluded.value;',
 ].join('\n'))
-console.log(`✓ ${Object.keys(flat).length} parámetros → 006`)
+console.log(`✓ ${Object.keys(flat).length} parámetros → 007`)
 
 // Pilar de cada hábito del catálogo según areaToPillar; sin pilar (Conexión) = fuera del catálogo nuevo.
 // Catálogo completo con pilar (upsert): así un hábito nuevo del catálogo llega con solo re-ejecutar la 006.
@@ -106,13 +127,16 @@ console.log(`✓ pilares de ${habits.length} hábitos → 006 (${habits.filter((
 
 const store = JSON.parse(readFileSync('content/store.json', 'utf8'))
 const arr = (a) => `array[${(a ?? []).map(q).join(', ')}]::text[]`
-replaceBlock(M6, 'STORE', [
-  'insert into public.store_catalog (slug, name, kind, price, price_by_weight, weekly_limit, opt_in, conflicts_with, per_objective, price_source) values',
+replaceBlock(M6, 'STORE', '-- El catálogo de la tienda se carga en la 007 (bloque STORE4).')
+replaceBlock(M7, 'STORE4', [
+  'insert into public.store_catalog (slug, name, kind, price, price_by_weight, weekly_limit, opt_in, conflicts_with, per_objective, price_source,',
+  '  area, unlock_level, group_only, registry_only) values',
   store.items.map((i) => `  (${[q(i.id), q(i.name), q(i.kind), q(i.price ?? null), i.priceByWeight ? jl(i.priceByWeight) : 'null',
-    q(i.weeklyLimit ?? null), q(Boolean(i.optIn)), arr(i.conflictsWith), q(Boolean(i.perObjective)),
-    q(i.priceSource === 'dueño' ? 'dueño' : 'sugerencia')].join(', ')})`).join(',\n'),
+    q(i.weeklyLimit ?? null), q(Boolean(i.optIn)), arr(i.conflictsWith), q(Boolean(i.perObjective)), q(i.priceSource ?? null),
+    q(i.area ?? null), q(i.unlockLevel ?? 0), q(Boolean(i.groupOnly)), q(Boolean(i.registryOnly))].join(', ')})`).join(',\n'),
   'on conflict (slug) do update set name = excluded.name, kind = excluded.kind, price = excluded.price,',
   '  price_by_weight = excluded.price_by_weight, weekly_limit = excluded.weekly_limit, opt_in = excluded.opt_in,',
-  '  conflicts_with = excluded.conflicts_with, per_objective = excluded.per_objective, price_source = excluded.price_source;',
+  '  conflicts_with = excluded.conflicts_with, per_objective = excluded.per_objective, price_source = excluded.price_source,',
+  '  area = excluded.area, unlock_level = excluded.unlock_level, group_only = excluded.group_only, registry_only = excluded.registry_only;',
 ].join('\n'))
-console.log(`✓ ${store.items.length} artículos de tienda → 006`)
+console.log(`✓ ${store.items.length} artículos de tienda → 007`)

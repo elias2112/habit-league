@@ -34,8 +34,8 @@ grant select on public.game_config, public.judgment_questions to authenticated;
 -- BEGIN JUDGMENT (generado por scripts/gen-catalog-sql.mjs; no editar a mano)
 insert into public.judgment_questions (id, kind, text, hint, type, unit, category, params, condition, sort) values
   ('comida', 'core', '¿Comiste mal ayer (chatarra, atracón, nada de verdura)?', null, 'yesno', null, 'vicio', '{"yes":-5,"no":2}'::jsonb, null, 0),
-  ('fumar', 'core', '¿Fumaste o vapeaste ayer? ¿Cuántos cigarrillos o sesiones?', 'Contá cada cigarrillo o cada vez que agarraste el vaper.', 'count', 'cigarrillos', 'vicio', '{"zero":3,"free":0,"per_unit":-1,"min":-10}'::jsonb, '{"quiz":"q21","in":["b","c","d"],"opt":"fumar"}'::jsonb, 1),
-  ('alcohol', 'core', '¿Tomaste alcohol ayer? ¿Cuántos tragos?', 'Hasta 2 no restan.', 'count', 'tragos', 'vicio', '{"zero":2,"free":2,"per_unit":-2,"min":-10}'::jsonb, '{"quiz":"q22","in":["b","c","d"],"opt":"alcohol"}'::jsonb, 2),
+  ('fumar', 'core', '¿Fumaste o vapeaste ayer? ¿Cuántos cigarrillos o sesiones?', 'Contá cada cigarrillo o cada vez que agarraste el vaper.', 'count', 'cigarrillos', 'vicio', '{"zero":3,"free":0,"per_unit":-1,"min":-10}'::jsonb, '{"area":"tabaco","in":["poco","mucho"],"opt":"fumar"}'::jsonb, 1),
+  ('alcohol', 'core', '¿Tomaste alcohol ayer? ¿Cuántos tragos?', 'Hasta 2 no restan.', 'count', 'tragos', 'vicio', '{"zero":2,"free":2,"per_unit":-2,"min":-10}'::jsonb, '{"area":"alcohol","in":["poco","mucho"],"opt":"alcohol"}'::jsonb, 2),
   ('gasto', 'core', '¿Gastaste en algo que no necesitabas? ¿Cuánto?', 'Ese gasto alimenta al Dragón.', 'money', null, 'dinero', '{"zero":2,"per_5":-1,"cap":-10}'::jsonb, null, 3),
   ('ahorro', 'core', '¿Ahorraste algo aparte de tus hábitos? ¿Cuánto?', 'Lo podés guardar en uno de tus cofres.', 'money', null, 'dinero', '{"zero":0,"per_5":1,"cap":10}'::jsonb, null, 4),
   ('disfrute', 'core', '¿Hiciste algo solo porque lo disfrutás?', null, 'yesno', null, 'disfrute', '{"yes":3,"no":0}'::jsonb, null, 5),

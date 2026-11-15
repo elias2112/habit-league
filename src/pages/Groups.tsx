@@ -7,14 +7,15 @@ import { timeAgo } from '../lib/date'
 import { describeChange, type ChangeKind, type ChangeRequest, type Scope } from '../lib/changes'
 import { fmtCoins } from '../lib/day'
 import { CONFIG } from '../game/config'
+import { exerciseName } from '../lib/strengthText'
 import EvidencePhoto from '../components/EvidencePhoto'
 import GroupChests from '../components/GroupChests'
 import { ErrorBox, PageHeader, PillarTag, Spinner, Weight } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 
-interface Activity { at: string; kind: 'log' | 'change' | 'purchase'; user_id: string; username: string; text: string; detail: Record<string, unknown> }
+interface Activity { at: string; kind: 'log' | 'change' | 'purchase' | 'strength_extra'; user_id: string; username: string; text: string; detail: Record<string, unknown> }
 
-/** Feed del grupo: registros, cambios votados y compras (todo visible; lo privado, enmascarado). */
+/** Feed del grupo: registros, cambios votados, compras y «20 extra» de fuerza base (lo privado, enmascarado). */
 function Feed({ groupId, me }: { groupId: string; me: string }) {
   const [rows, setRows] = useState<Activity[] | null>(null)
 
@@ -41,7 +42,7 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
         const d = r.detail
         return (
           <li key={i} className="flex items-center gap-3 py-2.5 text-sm">
-            <span className="text-lg" aria-hidden>{r.kind === 'log' ? '✅' : r.kind === 'change' ? '🗳️' : '🛍️'}</span>
+            <span className="text-lg" aria-hidden>{r.kind === 'log' ? '✅' : r.kind === 'change' ? '🗳️' : r.kind === 'strength_extra' ? '💪' : '🛍️'}</span>
             <span className="min-w-0 flex-1">
               <b className={r.user_id === me ? 'text-primary' : ''}>{who}</b>{' '}
               {r.kind === 'log' && <span className="text-ink">· {r.text}{Number(d.count) > 1 && d.unit ? ` (${d.count} ${d.unit})` : ''}</span>}
@@ -54,6 +55,7 @@ function Feed({ groupId, me }: { groupId: string; me: string }) {
                 </span>
               )}
               {r.kind === 'purchase' && <span className="text-ink">· compró «{r.text}» ({fmtCoins(Number(d.price))} monedas)</span>}
+              {r.kind === 'strength_extra' && <span className="text-ink">· hizo las {String(d.reps)} extra de {exerciseName(r.text).toLowerCase()} por un día fallado</span>}
             </span>
             {r.kind === 'log' && typeof d.photo_path === 'string' && <EvidencePhoto path={d.photo_path} className="h-10 w-10" />}
             <span className="w-16 text-right text-xs text-muted">{timeAgo(r.at)}</span>
@@ -89,7 +91,7 @@ function Reviews({ groupId, me }: { groupId: string; me: string }) {
   const pending = rows.filter((r) => r.status === 'pending')
   return (
     <section className="card mb-4">
-      <h2 className="mb-1 font-semibold">
+      <h2 className="mb-1 font-bold">
         🗳️ Votaciones {pending.length > 0 && <span className="ml-1 rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-bg">{pending.length}</span>}
       </h2>
       <p className="mb-3 text-xs text-muted">
@@ -108,9 +110,9 @@ function Reviews({ groupId, me }: { groupId: string; me: string }) {
                 de <b className="text-ink">{mine ? 'vos' : r.proposer}</b> · 👍 {r.yes} · 👎 {r.no} de {r.voters} · cierra en {closes} h
               </p>
               {!mine && (
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button className={`btn ${r.my_vote === 'yes' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'yes')}>👍 A favor</button>
-                  <button className={`btn ${r.my_vote === 'no' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'no')}>👎 En contra</button>
+                <div className="mt-2 flex gap-2">
+                  <button className={`btn min-h-9 px-3 py-1 text-sm ${r.my_vote === 'yes' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'yes')}>👍 A favor</button>
+                  <button className={`btn min-h-9 px-3 py-1 text-sm ${r.my_vote === 'no' ? 'btn-primary' : 'btn-ghost'}`} disabled={busy === r.id} onClick={() => vote(r, 'no')}>👎 En contra</button>
                 </div>
               )}
             </li>
@@ -123,14 +125,15 @@ function Reviews({ groupId, me }: { groupId: string; me: string }) {
 
 /** Pesos de todos (transparencia contra los pesos inflados). Privados y vicios sin nombre. */
 function FriendsPlans({ groupId, me }: { groupId: string; me: string }) {
-  const [rows, setRows] = useState<{ user_id: string; username: string; habits: { name: string; pillar: string | null; weight: number; target: number | null; unit: string | null }[]; vices: { name: string; weight: number; severity: string }[] }[]>([])
+  const [rows, setRows] = useState<{ user_id: string; username: string; habits: { name: string; pillar: string | null; weight: number; target: number | null; unit: string | null; scope?: string }[]; vices: { name: string; weight: number; severity: string }[] }[]>([])
   useEffect(() => {
     supabase.rpc('group_plans', { p_group: groupId }).then(({ data }) => setRows((data as typeof rows) ?? []))
   }, [groupId])
   if (rows.length === 0) return null
   return (
     <details className="card mb-4">
-      <summary className="cursor-pointer font-semibold">⚖️ Pesos de cada uno</summary>
+      <summary className="cursor-pointer font-bold">⚖️ Pesos de cada uno</summary>
+      <p className="mt-1 text-xs text-muted">Los «solo yo» no cuentan para el ranking.</p>
       <div className="mt-3 space-y-4">
         {rows.map((p) => (
           <div key={p.user_id}>
@@ -138,7 +141,7 @@ function FriendsPlans({ groupId, me }: { groupId: string; me: string }) {
             <ul className="space-y-1 text-sm">
               {p.habits.map((h, i) => (
                 <li key={i} className="flex items-center justify-between gap-2">
-                  <span className="truncate"><PillarTag pillar={h.pillar} /> {h.name}{h.target != null ? ` (meta ${h.target} ${h.unit ?? ''})` : ''}</span>
+                  <span className="truncate"><PillarTag pillar={h.pillar} /> {h.name}{h.target != null ? ` (meta ${h.target} ${h.unit ?? ''})` : ''}{h.scope === 'solo-yo' ? <span className="text-xs text-muted"> · solo yo</span> : null}</span>
                   <Weight w={h.weight} />
                 </li>
               ))}
@@ -213,64 +216,70 @@ export default function Groups() {
 
   if (loading) return <div className="grid place-items-center pt-24"><Spinner /></div>
 
+  const small = 'btn min-h-9 px-3 py-1 text-sm'
+
   return (
     <>
-      <PageHeader title="Grupo" />
+      <PageHeader title="Grupo" subtitle={selected ? selected.name : 'Jugá con tus amigos'} />
       <ErrorBox>{error}</ErrorBox>
 
-      {selected && (
+      {selected ? (
         <>
-          <GroupPicker groups={groups} selected={selected} onSelect={select} />
+          {groups.length > 1 && <GroupPicker groups={groups} selected={selected} onSelect={select} />}
           <section className="card mb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-muted">Código de invitación</p>
-                <p className="font-mono text-2xl font-bold tracking-widest text-primary">{selected.invite_code}</p>
-                <p className="mt-1 text-sm text-muted">
-                  {members !== null && `${members} ${members === 1 ? 'miembro' : 'miembros'} · `}
-                  Reto de {selected.duration_days} días desde el {new Date(selected.start_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}
-                </p>
+            <h2 className="mb-2 font-bold">👥 Tu grupo</h2>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs text-muted">Código de invitación</p>
+                <p className="font-mono text-xl font-bold tracking-widest text-primary">{selected.invite_code}</p>
               </div>
-              <button className="btn btn-primary shrink-0" onClick={share}>{copied ? '¡Copiado!' : 'Invitar'}</button>
+              <button className={`${small} btn-primary shrink-0`} onClick={share}>{copied ? '¡Copiado!' : 'Invitar'}</button>
             </div>
+            <p className="mt-2 text-xs text-muted">
+              {members !== null && `${members} ${members === 1 ? 'miembro' : 'miembros'} · `}
+              Reto de {selected.duration_days} días desde el {new Date(selected.start_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}
+            </p>
           </section>
 
           <Reviews groupId={selected.id} me={me} />
 
-          <FriendsPlans groupId={selected.id} me={me} />
+          <section className="card mb-4">
+            <h2 className="mb-2 font-bold">📣 Actividad</h2>
+            <Feed groupId={selected.id} me={me} />
+          </section>
 
           <GroupChests groupId={selected.id} me={me} />
 
+          <FriendsPlans groupId={selected.id} me={me} />
+
+          <div className="mt-6 text-center">
+            <button className={`${small} btn-ghost text-danger`} onClick={leave}>Salir de «{selected.name}»</button>
+          </div>
+        </>
+      ) : (
+        <>
           <section className="card mb-4">
-            <h2 className="mb-2 font-semibold">Actividad del grupo</h2>
-            <Feed groupId={selected.id} me={me} />
+            <h2 className="mb-1 font-bold">🔑 Unirme con código</h2>
+            <p className="mb-3 text-xs text-muted">Pedile el código a quien creó el grupo.</p>
+            <form onSubmit={join} className="flex gap-2">
+              <input className="input font-mono uppercase tracking-widest" required maxLength={8} placeholder="ab12cd34" value={code} onChange={(e) => setCode(e.target.value)} />
+              <button className={`${small} btn-primary`} disabled={busy}>Unirme</button>
+            </form>
+          </section>
+
+          <section className="card mb-4">
+            <h2 className="mb-1 font-bold">✨ Crear grupo</h2>
+            <p className="mb-3 text-xs text-muted">Una persona puede estar en un solo grupo. El reto empieza hoy y solo cuentan los puntos de esas fechas.</p>
+            <form onSubmit={create} className="space-y-3">
+              <input className="input" required maxLength={40} placeholder="Nombre del grupo" value={name} onChange={(e) => setName(e.target.value)} />
+              <div>
+                <label className="label" htmlFor="dur">Duración del reto (días)</label>
+                <input id="dur" className="input" type="number" min={1} max={366} required value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+              </div>
+              <button className={`${small} btn-primary`} disabled={busy}>Crear grupo</button>
+            </form>
           </section>
         </>
-      )}
-
-      <section className="card mb-4">
-        <h2 className="mb-3 font-semibold">Unirme con código</h2>
-        <form onSubmit={join} className="flex gap-2">
-          <input className="input font-mono uppercase tracking-widest" required maxLength={8} placeholder="ab12cd34" value={code} onChange={(e) => setCode(e.target.value)} />
-          <button className="btn btn-primary" disabled={busy}>Unirme</button>
-        </form>
-      </section>
-
-      <section className="card mb-4">
-        <h2 className="mb-3 font-semibold">Crear grupo</h2>
-        <form onSubmit={create} className="space-y-3">
-          <input className="input" required maxLength={40} placeholder="Nombre del grupo" value={name} onChange={(e) => setName(e.target.value)} />
-          <div>
-            <label className="label">Duración del reto (días)</label>
-            <input className="input" type="number" min={1} max={366} required value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-          </div>
-          <button className="btn btn-primary w-full" disabled={busy}>Crear grupo</button>
-        </form>
-        <p className="mt-2 text-xs text-muted">El reto empieza hoy. Solo cuentan los puntos ganados dentro de esas fechas.</p>
-      </section>
-
-      {selected && (
-        <button className="btn btn-ghost w-full text-danger" onClick={leave}>Salir de “{selected.name}”</button>
       )}
     </>
   )

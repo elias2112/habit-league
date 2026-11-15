@@ -10,7 +10,6 @@ import type { LeaderboardRow } from '../lib/types'
 import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, Spinner } from '../components/ui'
 import GroupPicker from '../components/GroupPicker'
 import { MyRadar } from '../components/MyRadar'
-import LeagueTable from '../components/LeagueTable'
 const fmtMult = (m: number) => `×${m.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`
 import { emblemUrl } from '../components/ArchetypeCard'
 
@@ -24,7 +23,6 @@ export default function Ranking() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<string | null>(null)
-  const [tab, setTab] = useState<'points' | 'league'>('points')
 
   const load = useCallback(async () => {
     if (!selected) return
@@ -34,7 +32,6 @@ export default function Ranking() {
       setRows((data as LeaderboardRow[]).map((r) => ({
         ...r,
         total_points: Number(r.total_points),
-        legacy_points: Number(r.legacy_points ?? 0),
         max_points: Number(r.max_points),
         pct: r.pct == null ? null : Number(r.pct),
       })))
@@ -81,18 +78,7 @@ export default function Ranking() {
       {cd && !cd.finished && <div className="mb-4"><Bar value={cd.day} max={cd.total} className="bg-primary" /></div>}
       <ErrorBox>{error}</ErrorBox>
 
-      <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
-        {(['points', 'league'] as const).map((t) => (
-          <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
-            className={`min-h-10 rounded-lg text-sm font-semibold ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>
-            {t === 'points' ? '🏆 Puntos del reto' : '🐪 Liga'}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'league' ? (
-        <LeagueTable groupId={selected.id} me={me} />
-      ) : loading ? (
+      {loading ? (
         <div className="grid place-items-center pt-10"><Spinner /></div>
       ) : (
         <ol className="space-y-2">
@@ -112,14 +98,13 @@ export default function Ranking() {
                       {r.display_name || r.username}
                       {isMe && <span className="ml-1.5 text-xs font-semibold text-primary">(vos)</span>}
                     </span>
-                    <span className="block truncate text-xs text-muted">Nivel {r.level ?? 0}{arch ? ` · ${arch.name}` : ` · @${r.username}`}</span>
+                    <span className="block truncate text-xs text-muted">Nivel {r.level ?? 0}{r.rank ? ` · ${r.rank}` : ''}{arch ? ` · ${arch.name}` : ` · @${r.username}`}</span>
                   </span>
                   {Number(r.multiplier) < 1 && <span className="rounded-md bg-danger/15 px-1.5 py-0.5 text-xs font-bold text-danger" title="Multiplicador de hoy por recaídas sin permiso">{fmtMult(Number(r.multiplier))}</span>}
                   <Flame n={r.streak} />
                   <span className="w-20 text-right">
                     <span className="block font-black tabular-nums text-xp">{Math.round(r.total_points)}</span>
                     <span className="block text-xs tabular-nums text-muted">{r.pct == null ? '—' : `${Math.round(r.pct)}%`}</span>
-                    {r.legacy_points > 0 && <span className="block text-[10px] tabular-nums text-muted" title="Puntos de los días anteriores al cambio de reglas, congelados como estaban">incl. {Math.round(r.legacy_points)} de legado</span>}
                   </span>
                 </button>
                 {open === r.user_id && (
@@ -133,9 +118,9 @@ export default function Ranking() {
           })}
         </ol>
       )}
-      {tab === 'points' && <p className="mt-4 text-center text-xs text-muted">
-        Puntos del reto (máx. 100 por día). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Cada día suma hasta 100: lo que pasa de 100 va al pool de monedas, no al ranking. Las recaídas sin permiso multiplican el día. Los días anteriores al cambio de reglas quedan como estaban ("legado"). Tocá a alguien para ver su radar.
-      </p>}
+      <p className="mt-4 text-center text-xs text-muted">
+        Puntos del reto (máx. 100 por día). Cuentan los hábitos y vicios del plan inicial y los votados para todo el grupo; los «solo yo» no cuentan acá (sí para las monedas, la experiencia y el rango de cada uno). El % compara contra el máximo posible desde que cada uno entró. La racha suma días seguidos con al menos un hábito completo. Lo que pasa de 100 va al pool de monedas. Las recaídas sin permiso multiplican el día. Tocá a alguien para ver su radar.
+      </p>
     </>
   )
 }

@@ -30,35 +30,7 @@ create unique index if not exists group_members_one_group on public.group_member
 
 -- ───────────── 1. Configuración ─────────────
 -- BEGIN CONFIG3 (generado por scripts/gen-catalog-sql.mjs; no editar a mano)
-insert into public.game_config (key, value) values
-  ('severity', '{"leve":0.95,"normal":0.9,"grave":0.8}'::jsonb),
-  ('multiplierFloor', '0.7'::jsonb),
-  ('maxCompletion', '1.5'::jsonb),
-  ('coinsAt75', '2'::jsonb),
-  ('coinsAt100', '4'::jsonb),
-  ('coinThresholdLow', '75'::jsonb),
-  ('coinThresholdHigh', '100'::jsonb),
-  ('overflowRate', '0.1'::jsonb),
-  ('streakStepDays', '7'::jsonb),
-  ('streakStepBonus', '0.1'::jsonb),
-  ('unpaidSlipStepsLost', '1'::jsonb),
-  ('dayCutoffHour', '0'::jsonb),
-  ('weekStartsOn', '"monday"'::jsonb),
-  ('poolClosesAt', '"sunday 23:59"'::jsonb),
-  ('voteWindowHours', '24'::jsonb),
-  ('permitResetsCleanStreak', 'true'::jsonb),
-  ('minActiveHabits', '3'::jsonb),
-  ('maxObjectives', '3'::jsonb),
-  ('groupScopeDefaultWeight', '2'::jsonb),
-  ('maxGoals', '3'::jsonb),
-  ('pillars', '[{"id":"cuerpo","name":"Cuerpo","icon":"💪","color":"#FF6B6B"},{"id":"mente","name":"Mente","icon":"🧠","color":"#B4A8FF"},{"id":"dinero","name":"Dinero","icon":"💰","color":"#7BD88F"},{"id":"habilidades","name":"Habilidades","icon":"🛠️","color":"#5AA9FF"},{"id":"creatividad","name":"Creatividad","icon":"🎨","color":"#FF8FD0"},{"id":"carrera","name":"Carrera y estudios","icon":"🎓","color":"#4FD1C5","provisional":true}]'::jsonb),
-  ('areaToPillar', '{"cuerpo":"cuerpo","sueno":"cuerpo","alimentacion":"cuerpo","mente":"mente","foco":"mente","social":null}'::jsonb),
-  ('xpPerLevel', '300'::jsonb),
-  ('strengthExercises', '[{"id":"flexiones","name":"Flexiones","unit":"repeticiones","targets":[10,30,50,100]},{"id":"sentadillas","name":"Sentadillas","unit":"repeticiones","targets":[10,30,50,100]},{"id":"dominadas","name":"Dominadas","unit":"repeticiones","targets":[10,30,50,100]}]'::jsonb),
-  ('strengthTargets', '{"flexiones":[10,30,50,100],"sentadillas":[10,30,50,100],"dominadas":[10,30,50,100]}'::jsonb),
-  ('strengthWeight', '1'::jsonb),
-  ('strengthDefaultLevel', '0'::jsonb)
-on conflict (key) do update set value = excluded.value;
+-- La configuración se carga en la 007 (bloque CONFIG4).
 -- END CONFIG3
 
 -- Cambios de parámetros votados por el grupo (rigen desde effective_from).
@@ -360,24 +332,7 @@ create table if not exists public.store_catalog (
   price_source text
 );
 -- BEGIN STORE (generado por scripts/gen-catalog-sql.mjs; no editar a mano)
-insert into public.store_catalog (slug, name, kind, price, price_by_weight, weekly_limit, opt_in, conflicts_with, per_objective, price_source) values
-  ('cerveza', 'Una cerveza', 'permit', 5, null, 6, true, array[]::text[], false, 'dueño'),
-  ('trago', 'Un trago', 'permit', 12, null, null, true, array[]::text[], false, 'dueño'),
-  ('cigarro', 'Un cigarro', 'permit', 3, null, null, true, array['dejar-fumar']::text[], false, 'sugerencia'),
-  ('comer-mal', 'Comer mal (una comida)', 'permit', 10, null, null, true, array[]::text[], false, 'sugerencia'),
-  ('antojo-dulce', 'Un antojo dulce', 'permit', 3, null, null, true, array[]::text[], false, 'sugerencia'),
-  ('cafe-afuera', 'Café o desayuno afuera', 'reward', 3, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('cine', 'Cine', 'reward', 10, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('libro', 'Un libro nuevo', 'reward', 15, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('cena-afuera', 'Cena afuera', 'reward', 25, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('plan-del-grupo', 'Elegir el plan del grupo', 'reward', 6, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('pase-habito', 'Pase de un hábito (un día)', 'reward', null, '{"1":2,"2":4,"3":6}'::jsonb, null, false, array[]::text[], false, 'sugerencia'),
-  ('comodin-racha', 'Comodín de racha (protege el multiplicador una vez)', 'reward', 10, null, null, false, array[]::text[], false, 'sugerencia'),
-  ('dia-libre-objetivo', 'Día libre de un objetivo', 'reward', 8, null, null, false, array[]::text[], true, 'sugerencia'),
-  ('premio-grande', 'Premio grande propio', 'reward', null, null, null, false, array[]::text[], false, 'sugerencia')
-on conflict (slug) do update set name = excluded.name, kind = excluded.kind, price = excluded.price,
-  price_by_weight = excluded.price_by_weight, weekly_limit = excluded.weekly_limit, opt_in = excluded.opt_in,
-  conflicts_with = excluded.conflicts_with, per_objective = excluded.per_objective, price_source = excluded.price_source;
+-- El catálogo de la tienda se carga en la 007 (bloque STORE4).
 -- END STORE
 
 create table if not exists public.store_items (
@@ -638,7 +593,9 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- Monedas día por día, desde la primera foto del plan hasta hoy (hoy queda abierto).
-create or replace function public.coin_days(p_user uuid)
+-- La 007 le agrega una columna: drop para poder re-ejecutar esta después de la 007.
+drop function if exists public.coin_days(uuid);
+create function public.coin_days(p_user uuid)
 returns table (day date, total numeric, overflow numeric, streak_before int, multiplier numeric, credit numeric, to_pool numeric, closed boolean)
 language plpgsql stable security definer set search_path = public as $$
 declare d date; today date; streak int := 0; s jsonb; c jsonb; cfg jsonb;
@@ -1342,7 +1299,6 @@ returns jsonb language sql stable security definer set search_path = public as $
     'propuestas', (select count(*) from change_requests where proposer_id = auth.uid()),
     'votos', (select count(*) from change_votes where voter_id = auth.uid()),
     'juicios', (select count(*) from daily_judgments where user_id = auth.uid()),
-    'liga', (select count(*) from league_events where user_id = auth.uid()),
     'aportes_compartidos', (select count(*) from group_chest_entries where user_id = auth.uid()),
     'grupo_creado', exists (select 1 from groups where created_by = auth.uid())
   );

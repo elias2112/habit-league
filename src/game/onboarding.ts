@@ -7,11 +7,12 @@ export interface OnboardingState {
   friction?: string
   goals: string[]
   personalized: string[]
-  trainingLevel?: number
+  /** metas elegidas por ejercicio (y si es variante fácil) o rechazo */
+  strength?: { targets: Record<string, number>; easy?: boolean } | 'declined'
 }
 export type Step =
   | { step: 'clear-goal' } | { step: 'pick-goals' } | { step: 'area' } | { step: 'friction' } | { step: 'suggest' }
-  | { step: 'personalize'; goal: string } | { step: 'training-level' } | { step: 'done' }
+  | { step: 'personalize'; goal: string } | { step: 'strength-base' } | { step: 'done' }
 
 export function nextStep(s: OnboardingState): Step {
   if (s.hasClearGoal === undefined) return { step: 'clear-goal' }
@@ -23,7 +24,7 @@ export function nextStep(s: OnboardingState): Step {
   }
   const pending = s.goals.find((g) => !s.personalized.includes(g))
   if (pending) return { step: 'personalize', goal: pending }
-  if (s.trainingLevel === undefined) return { step: 'training-level' }
+  if (s.strength === undefined) return { step: 'strength-base' }
   return { step: 'done' }
 }
 

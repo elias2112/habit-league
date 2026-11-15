@@ -7,10 +7,8 @@ import { catalogById } from '../lib/quiz'
 import { useMyDay, type DayHabit, type DayVice } from '../lib/day'
 import { describeChange, propose, type ChangeKind, type ChangeRequest, type Scope } from '../lib/changes'
 import { useGroups } from '../lib/groups'
-import { CONFIG, STRENGTH, type Severity } from '../game/config'
-import { ONB } from '../lib/onboardingPlan'
-
-const TRAINING = ONB.training.options
+import { CONFIG, type Severity } from '../game/config'
+import { personalHabitNotice } from '../game/ranking'
 import { VICES } from '../lib/vices'
 import CatalogPicker from '../components/CatalogPicker'
 import Goals from '../components/Goals'
@@ -20,7 +18,7 @@ export default function Habits() {
   const [tab, setTab] = useState<'plan' | 'chests'>('plan')
   return (
     <>
-      <PageHeader title="Mi plan" subtitle="Los cambios se votan en el grupo y rigen desde mañana." />
+      <PageHeader title="Mi plan" subtitle="Los cambios rigen desde mañana. Lo que cuenta para el ranking se vota en el grupo." />
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1" role="tablist">
         {(['plan', 'chests'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
@@ -34,7 +32,10 @@ export default function Habits() {
   )
 }
 
-function ScopePicker({ value, onChange, allowGroup = true }: { value: Scope; onChange: (s: Scope) => void; allowGroup?: boolean }) {
+/** Nombre del grupo para el aviso de «solo yo» (spec §3). */
+let GROUP_NAME = 'tu grupo'
+
+function ScopePicker({ value, onChange, allowGroup = true, adding = false }: { value: Scope; onChange: (s: Scope) => void; allowGroup?: boolean; adding?: boolean }) {
   return (
     <div>
       <span className="label">¿Para quién?</span>
@@ -42,7 +43,8 @@ function ScopePicker({ value, onChange, allowGroup = true }: { value: Scope; onC
         <button type="button" className={`btn text-sm ${value === 'me' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('me')}>Solo yo</button>
         <button type="button" disabled={!allowGroup} className={`btn text-sm ${value === 'group' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('group')}>Todo el grupo</button>
       </div>
-      {value === 'group' && <p className="mt-1 text-xs text-muted">Se agrega al plan de cada miembro (peso inicial {CONFIG.groupScopeDefaultWeight} para los demás; cada uno lo cambia después).</p>}
+      {value === 'group' && <p className="mt-1 text-xs text-muted">{adding ? `Se vota. Si se aprueba, se agrega al plan de cada miembro (peso inicial ${CONFIG.groupScopeDefaultWeight} para los demás; cada uno lo cambia después) y cuenta para el ranking.` : 'Se vota y, si se aprueba, cambia para cada miembro.'}</p>}
+      {value === 'me' && adding && <p className="mt-1 rounded-lg bg-xp/10 px-2 py-1.5 text-xs text-xp">{personalHabitNotice(GROUP_NAME)} Se agrega sin votación.</p>}
     </div>
   )
 }
@@ -69,15 +71,17 @@ function Plan() {
 
   const send: Send = async (scope, kind, payload) => {
     setError(null); setOk(null)
-    const { error } = await propose(scope, kind, payload)
+    const { data, error } = await propose(scope, kind, payload)
     if (error) { setError(errorMessage(error)); return false }
-    setOk('Propuesta enviada. Si se aprueba, rige desde mañana.')
+    const { data: st } = await supabase.from('change_requests').select('status').eq('id', data as string).maybeSingle()
+    setOk(st?.status === 'approved' ? 'Listo: rige desde mañana.' : 'Propuesta enviada. Si se aprueba, rige desde mañana.')
     setPanel(null)
     await Promise.all([reload(), loadMine()])
     return true
   }
 
   if (!day || gLoading) return <Loading />
+  GROUP_NAME = group?.name ?? day?.group_name ?? 'tu grupo'
   if (!group) return <p className="card text-sm text-muted">Para cambiar tu plan, primero <Link to="/grupos" className="font-semibold text-primary">uníte a un grupo o creá uno</Link>: los cambios se votan ahí.</p>
 
   const inPlan = new Set(day.habits.map((h) => h.catalog_id).filter(Boolean) as string[])
@@ -103,8 +107,6 @@ function Plan() {
         </section>
       )}
 
-      <TrainingLevel current={day.training_level} onSend={send} />
-
       <h2 className="mb-2 font-bold">Hábitos ({day.habits.length})</h2>
       <ul className="space-y-2">
         {day.habits.map((h) => (
@@ -113,7 +115,7 @@ function Plan() {
             <button className="flex w-full items-start gap-3 text-left" onClick={() => setPanel(panel?.kind === 'habit' && panel.h.id === h.id ? null : { kind: 'habit', h })}>
               <PillarIcon pillar={h.pillar} />
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold">{h.name} {h.private && <span className="text-xs text-muted">🔒</span>}</span>
+                <span className="block font-semibold">{h.name} {h.private && <span className="text-xs text-muted">🔒</span>}{h.scope === 'solo-yo' && <span className="ml-1 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted">solo yo · no cuenta para el ranking</span>}</span>
                 <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <PillarTag pillar={h.pillar} /><Weight w={h.weight} />
                   {h.target != null && <span className="text-xs text-muted">meta {h.target} {h.unit}</span>}
@@ -121,7 +123,7 @@ function Plan() {
               </span>
               <span className="text-sm text-muted">Cambiar ›</span>
             </button>
-            {panel?.kind === 'habit' && panel.h.id === h.id && <HabitChange h={h} canRemove={day.habits.length > CONFIG.minActiveHabits} onSend={send} />}
+            {panel?.kind === 'habit' && panel.h.id === h.id && <HabitChange h={h} cap={day.strength_cap} canRemove={day.habits.length > CONFIG.minActiveHabits} onSend={send} />}
           </li>
         ))}
       </ul>
@@ -186,38 +188,31 @@ function Plan() {
 
 const BLOCK_LABEL: Record<string, string> = { fuerza: '💪 Fuerza base', deporte: '🏃 Deporte o gimnasio', objetivo: '🎯 De un objetivo', general: '✨ General' }
 
-function TrainingLevel({ current, onSend }: { current: number | null; onSend: Send }) {
-  const [open, setOpen] = useState(false)
-  const lvl = current ?? CONFIG.strengthDefaultLevel
-  return (
-    <section className="card mb-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-semibold">Nivel de entrenamiento: {TRAINING[lvl]?.text ?? lvl}</p>
-          <p className="text-xs text-muted">{STRENGTH.map((e) => `${e.targets[lvl]} ${e.name.toLowerCase()}`).join(' · ')} por día</p>
-        </div>
-        <button className="btn btn-ghost min-h-9 shrink-0 px-3 py-1 text-sm" onClick={() => setOpen(!open)}>Cambiar</button>
-      </div>
-      {open && (
-        <div className="mt-3 space-y-2 border-t border-line pt-3">
-          <p className="text-xs text-muted">Se vota como cualquier cambio y rige desde mañana: hoy no se puede bajar la meta para llegar a 100.</p>
-          {TRAINING.map((o) => (
-            <button key={o.level} disabled={o.level === lvl} className="btn btn-ghost w-full justify-between text-left text-sm"
-              onClick={() => onSend('me', 'training.level', { level: o.level, name: o.text })}>
-              <span>{o.text}</span><span className="text-xs text-muted">{STRENGTH.map((e) => e.targets[o.level]).join(' / ')}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </section>
-  )
+function HabitChange({ h, cap, canRemove, onSend }: { h: DayHabit; cap: number; canRemove: boolean; onSend: Send }) {
+  if (h.block === 'fuerza') return <StrengthTarget h={h} cap={cap} onSend={onSend} />
+  return <HabitChangeForm h={h} canRemove={canRemove} onSend={onSend} />
 }
 
-function HabitChange({ h, canRemove, onSend }: { h: DayHabit; canRemove: boolean; onSend: Send }) {
-  if (h.block === 'fuerza') {
-    return <p className="mt-3 border-t border-line pt-3 text-sm text-muted">La fuerza base es para todos: su meta cambia con tu nivel de entrenamiento (arriba).</p>
-  }
-  return <HabitChangeForm h={h} canRemove={canRemove} onSend={onSend} />
+/** Meta de un ejercicio de fuerza base: botones de a 10 hasta el tope del nivel; se vota porque cuenta para el ranking. */
+function StrengthTarget({ h, cap, onSend }: { h: DayHabit; cap: number; onSend: Send }) {
+  const [t, setT] = useState(h.target ?? CONFIG.strengthTargetStep)
+  const [scope, setScope] = useState<Scope>('me')
+  const opts = Array.from({ length: Math.floor(cap / CONFIG.strengthTargetStep) }, (_, i) => (i + 1) * CONFIG.strengthTargetStep)
+  return (
+    <div className="mt-3 space-y-3 border-t border-line pt-3">
+      <p className="text-xs text-muted">La fuerza base no se saca. Su meta se vota (cuenta para el ranking) y rige desde mañana. Tu tope hoy: {cap} {h.unit}.</p>
+      <div className="grid grid-cols-5 gap-1.5" role="group" aria-label={`Meta de ${h.name}`}>
+        {opts.map((v) => (
+          <button key={v} onClick={() => setT(v)} aria-pressed={t === v}
+            className={`min-h-10 rounded-xl text-sm font-semibold ${t === v ? 'bg-primary text-bg' : 'bg-surface-2 text-muted'}`}>{v}</button>
+        ))}
+      </div>
+      <ScopePicker value={scope} onChange={setScope} />
+      <button className="btn btn-primary w-full" disabled={t === h.target} onClick={() => onSend(scope, 'habit.target', { habit_id: h.id, name: h.name, target: t })}>
+        Proponer meta {t} {h.unit}
+      </button>
+    </div>
+  )
 }
 
 function HabitChangeForm({ h, canRemove, onSend }: { h: DayHabit; canRemove: boolean; onSend: Send }) {
@@ -225,11 +220,13 @@ function HabitChangeForm({ h, canRemove, onSend }: { h: DayHabit; canRemove: boo
   const [target, setTarget] = useState(h.target != null ? String(h.target) : '')
   const [scope, setScope] = useState<Scope>('me')
   const base = { habit_id: h.id, name: h.name }
+  const solo = h.scope === 'solo-yo'
   return (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
-      {!h.private && <ScopePicker value={scope} onChange={setScope} />}
+      {solo ? <p className="text-xs text-muted">Es «solo yo»: no cuenta para el ranking, así que los cambios son directos (rigen desde mañana).</p>
+            : !h.private && <ScopePicker value={scope} onChange={setScope} />}
       <WeightPicker value={w} onChange={setW} />
-      <button className="btn btn-primary w-full" disabled={w === h.weight} onClick={() => onSend(scope, 'habit.weight', { ...base, weight: w })}>Proponer peso {w}</button>
+      <button className="btn btn-primary w-full" disabled={w === h.weight} onClick={() => onSend(scope, 'habit.weight', { ...base, weight: w })}>{solo ? 'Cambiar' : 'Proponer'} peso {w}</button>
       {(h.target != null || h.unit) && (
         <div className="flex gap-2">
           <input className="input" type="number" min={1} value={target} onChange={(e) => setTarget(e.target.value)} aria-label="Nueva meta" />
@@ -261,9 +258,9 @@ function CatalogAdd({ inPlan, onSend, onCancel }: { inPlan: Set<string>; onSend:
             <input type="checkbox" className="h-5 w-5 accent-[var(--color-primary)]" checked={priv} onChange={(e) => { setPriv(e.target.checked); if (e.target.checked) setScope('me') }} />
             Privado (el grupo ve "Hábito privado" y su peso; no se vota)
           </label>
-          {!priv && <ScopePicker value={scope} onChange={setScope} />}
+          {priv ? <p className="rounded-lg bg-xp/10 px-2 py-1.5 text-xs text-xp">{personalHabitNotice(GROUP_NAME)}</p> : <ScopePicker value={scope} onChange={setScope} adding />}
           <div className="flex gap-2">
-            <button className="btn btn-primary flex-1" onClick={() => onSend(priv ? 'me' : scope, 'habit.add', { catalog_id: c.id, name: c.name, weight: w, private: priv })}>Proponer</button>
+            <button className="btn btn-primary flex-1" onClick={() => onSend(priv ? 'me' : scope, 'habit.add', { catalog_id: c.id, name: c.name, weight: w, private: priv })}>{priv || scope === 'me' ? 'Agregar' : 'Proponer'}</button>
             <button className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
           </div>
         </div>
@@ -309,9 +306,9 @@ function CustomAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void })
           <input className="input" required maxLength={20} placeholder="palabras" value={unit} onChange={(e) => setUnit(e.target.value)} aria-label="Unidad" />
         </div>
       )}
-      <ScopePicker value={scope} onChange={setScope} />
+      <ScopePicker value={scope} onChange={setScope} adding />
       <div className="flex gap-2">
-        <button className="btn btn-primary flex-1" disabled={!name.trim()}>Proponer</button>
+        <button className="btn btn-primary flex-1" disabled={!name.trim()}>{scope === 'me' ? 'Agregar' : 'Proponer'}</button>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>
       </div>
     </form>
@@ -348,7 +345,7 @@ function ViceAdd({ onSend, onCancel }: { onSend: Send; onCancel: () => void }) {
         </div>
       </div>
       <WeightPicker value={w} onChange={setW} label="¿Cuánto te cuesta evitarlo?" />
-      <p className="text-xs text-muted">Es privado: se aprueba sin votación y rige desde mañana.</p>
+      <p className="rounded-lg bg-xp/10 px-2 py-1.5 text-xs text-xp">{personalHabitNotice(GROUP_NAME).replace('Este hábito', 'Este vicio')} Es privado y se agrega sin votación.</p>
       <div className="flex gap-2">
         <button className="btn btn-primary flex-1" disabled={!name.trim()}>Agregar</button>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancelar</button>

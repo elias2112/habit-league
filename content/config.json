@@ -1,6 +1,6 @@
 {
-  "version": "4.0",
-  "note": "ÚNICO lugar de parámetros del juego (spec v3, reference/config.mjs). La app lo importa y `npm run catalog` lo copia a la base (game_config). El grupo puede cambiar valores por votación (group_config). [dueño] = lo dijo el dueño; [propuesta] = valor a calibrar con el testing.",
+  "version": "4.2",
+  "note": "ÚNICO lugar de parámetros del juego (spec v4.2, reference/config.mjs). La app lo importa y `npm run catalog` lo copia a la base (game_config). El grupo puede cambiar valores por votación (group_config). [dueño] = lo dijo el dueño; [provisional] = valor a calibrar con el testing.",
   "scoring": {
     "severity": {
       "leve": 0.95,
@@ -82,46 +82,121 @@
   },
   "levels": {
     "xpPerLevel": 300,
-    "note": "PROVISIONAL [propuesta]: experiencia por nivel; 300 = 3 días perfectos por nivel. Experiencia del día = puntos del día. El nivel no baja."
+    "note": "PROVISIONAL: experiencia por nivel. Experiencia = total personal de cada día + experiencia de la fuerza base − la pagada por días fallados; mínimo 0. El nivel PUEDE bajar."
   },
   "strength": {
-    "note": "SUPUESTO (no decisión del dueño): el dueño dijo 10-30-50-100; se asumió repeticiones por día y las mismas cifras para los tres. Editable por ejercicio.",
+    "note": "Fuerza base v4.2. [dueño] ejercicios, peso 3, botones de a 10 hasta 100, tope que sube cada 10 niveles, Variante A, perdón con 75 %, 20 extra. PROVISIONAL: plancha en segundos, +10 al tope, factor 0,5 + meta/100, variante fácil, tope desde el día 4, compoundMissRate.",
     "exercises": [
       {
         "id": "flexiones",
         "name": "Flexiones",
-        "unit": "repeticiones",
-        "targets": [
-          10,
-          30,
-          50,
-          100
-        ]
+        "unit": "repeticiones"
       },
       {
         "id": "sentadillas",
         "name": "Sentadillas",
-        "unit": "repeticiones",
-        "targets": [
-          10,
-          30,
-          50,
-          100
-        ]
+        "unit": "repeticiones"
       },
       {
-        "id": "dominadas",
-        "name": "Dominadas",
-        "unit": "repeticiones",
-        "targets": [
-          10,
-          30,
-          50,
-          100
-        ]
+        "id": "plancha",
+        "name": "Plancha",
+        "unit": "segundos"
       }
     ],
-    "weight": 1,
-    "defaultLevel": 0
+    "weight": 3,
+    "targetStep": 10,
+    "targetMax": 100,
+    "levelCapStep": 10,
+    "levelCapBonus": 10,
+    "rewardBase": 0.5,
+    "rewardDivisor": 100,
+    "easyTarget": 10,
+    "easyVariants": {
+      "flexiones": "flexiones en la pared",
+      "sentadillas": "sentarse y pararse de una silla",
+      "plancha": "plancha apoyando las rodillas"
+    },
+    "compound": {
+      "baseCoins": 1,
+      "baseExp": 5,
+      "factor": 2,
+      "capDay": 4,
+      "weekDays": 7
+    },
+    "compoundMissRate": 1,
+    "forgiveRatio": 0.75,
+    "extraReps": 20
+  },
+  "ranks": {
+    "note": "PROVISIONAL: nombres, umbrales y premios (monedas, de una sola vez; si el rango se pierde, se quita).",
+    "rankPoints": {
+      "activeDay": 1,
+      "missedDay": -2,
+      "floor": 0
+    },
+    "list": [
+      {
+        "name": "Aspirante",
+        "minPoints": 0,
+        "reward": 0
+      },
+      {
+        "name": "Constante",
+        "minPoints": 10,
+        "reward": 10
+      },
+      {
+        "name": "Veterano",
+        "minPoints": 30,
+        "reward": 20
+      },
+      {
+        "name": "Leyenda",
+        "minPoints": 50,
+        "reward": 40
+      }
+    ]
+  },
+  "ranking": {
+    "rankingCountsPersonalHabits": false,
+    "personalHabitsGiveExp": true,
+    "note": "[dueño] «solo yo» no cuenta para el ranking y sí da monedas y experiencia."
+  },
+  "storeAreas": {
+    "note": "[dueño] poco ×2, mucho ×4. noProblem: base = precio base, hide = no se ofrece.",
+    "areaPriceMultiplier": {
+      "poco": 2,
+      "mucho": 4
+    },
+    "areas": {
+      "tabaco": {
+        "noProblem": "hide"
+      },
+      "alcohol": {
+        "noProblem": "hide"
+      },
+      "comida": {
+        "noProblem": "base"
+      },
+      "dulce": {
+        "noProblem": "base"
+      },
+      "redes": {
+        "noProblem": "hide"
+      },
+      "juegos": {
+        "noProblem": "hide"
+      }
+    }
+  },
+  "chests": {
+    "note": "PROVISIONAL (dueño aprobó la propuesta): hitos del cofre de ahorro y bonus «Cofre a salvo» en monedas. Antes daban puntos de liga 5/10/15/30 y 5 por semana (÷5).",
+    "milestones": {
+      "25": 1,
+      "50": 2,
+      "75": 3,
+      "100": 6
+    },
+    "weeklySafeBonus": 1
   }
 }

@@ -52,7 +52,7 @@ export default function GroupChests({ groupId, me }: { groupId: string; me: stri
   return (
     <section className="card mb-4">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-semibold">🧰 Cofres del grupo</h2>
+        <h2 className="font-bold">🧰 Cofres del grupo</h2>
         {!creating && <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => setCreating(true)}>+ Nuevo</button>}
       </div>
       <ErrorBox>{error}</ErrorBox>
@@ -66,7 +66,7 @@ export default function GroupChests({ groupId, me }: { groupId: string; me: stri
           </div>
         </form>
       )}
-      {rows.length === 0 && !creating && <p className="text-sm text-muted">Un cofre compartido para juntar entre todos (un viaje, un asado…). Cada uno anota lo que pone.</p>}
+      {rows.length === 0 && !creating && <p className="text-sm text-muted">Un cofre compartido para juntar plata real entre todos (un viaje, un asado…). Cada uno anota lo que pone; no mueve monedas del juego.</p>}
       <ul className="space-y-4">
         {rows.filter((r) => !r.archived).map((r) => {
           const pct = Math.min(100, (r.total / r.target) * 100)
@@ -76,7 +76,7 @@ export default function GroupChests({ groupId, me }: { groupId: string; me: stri
                 <b>{r.title}</b>
                 <span className="text-sm tabular-nums"><b className="text-xp">{fmt(r.total)}</b><span className="text-muted"> / {fmt(r.target)} {r.unit}</span></span>
               </p>
-              <Chest pct={pct} />
+              <Chest pct={pct} rewards={false} />
               {r.contributions.length > 0 && (
                 <p className="mt-2 text-xs text-muted">
                   {r.contributions.map((c) => `${c.user_id === me ? 'vos' : c.username} ${fmt(Number(c.amount))} ${r.unit}`).join(' · ')}

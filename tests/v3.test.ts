@@ -145,10 +145,10 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
 
   it('el plan del quiz rige desde hoy, sin votación, una sola vez; exige deporte y suma la fuerza base', async () => {
     await expect(h.as(A, `select create_initial_plan('[{"catalog_id":"caminar_30"}]'::jsonb)`)).rejects.toThrow(/deporte/)
-    await h.as(A, `select create_initial_plan($1::jsonb, '[{"name":"Fumar","weight":2,"severity":"grave"}]'::jsonb, '[{"title":"Leer más","tag":null}]'::jsonb)`, [habits])
+    await h.as(A, `select create_initial_plan($1::jsonb, '[{"name":"Fumar","weight":2,"severity":"grave"}]'::jsonb, '[{"title":"Leer más","tag":null}]'::jsonb, '{"targets":{"flexiones":10,"sentadillas":10,"plancha":10}}'::jsonb)`, [habits])
     const d = await h.one<{ has_plan: boolean; habits: { weight: number; target: number | null }[]; vices: unknown[]; objectives: unknown[] }>(A, `select my_day() r`)
     expect(d.has_plan).toBe(true)
-    expect(d.habits.map((x) => [x.weight, x.target]).sort()).toEqual([[1, 10], [1, 10], [1, 10], [1, null], [2, 8], [2, null], [3, null]].sort())
+    expect(d.habits.map((x) => [x.weight, x.target]).sort()).toEqual([[3, 10], [3, 10], [3, 10], [1, null], [2, 8], [2, null], [3, null]].sort())
     expect(d.vices).toHaveLength(1)
     expect(d.objectives).toHaveLength(1)
     await expect(h.as(A, `select create_initial_plan($1::jsonb)`, [habits])).rejects.toThrow(/Ya tenés un plan/)
@@ -161,8 +161,8 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
 
   it('grupo de 3: el cambio queda pendiente; con 2 de 2 votos se aprueba y rige mañana, sin tocar hoy', async () => {
     const g = await group(A, B, C)
-    await h.as(A, `select create_initial_plan($1::jsonb)`, [habits])
-    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('me', 'habit.add', '{"catalog_id":"leer_15","weight":3}'::jsonb) id`)
+    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{"flexiones":10,"sentadillas":10,"plancha":10}}'::jsonb)`, [habits])
+    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('group', 'habit.add', '{"catalog_id":"leer_15","weight":3}'::jsonb) id`)
     const reqs = await h.as<{ status: string }>(B, `select * from group_requests($1)`, [g])
     expect(reqs[0].status).toBe('pending')
     expect(await h.as<{ s: string }>(B, `select vote_change($1, 'yes') s`, [id])).toEqual([{ s: 'pending' }]) // 1 de 2: no es mayoría
@@ -174,14 +174,14 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
 
   it('ventana vencida sin votos: se aprueba sola; el proponente no vota; fuerza base y deporte protegidos', async () => {
     const g = await group(A, B)
-    await h.as(A, `select create_initial_plan($1::jsonb)`, [habits])
+    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{"flexiones":10,"sentadillas":10,"plancha":10}}'::jsonb)`, [habits])
     // La fuerza base no se saca y siempre queda al menos un deporte.
     const [fz] = await h.as<{ id: string }>(A, `select id from habits where user_id = auth.uid() and block = 'fuerza' limit 1`)
     await expect(h.as(A, `select propose_change('me', 'habit.remove', jsonb_build_object('habit_id', $1::text))`, [fz.id])).rejects.toThrow(/fuerza base/)
     const [dp] = await h.as<{ id: string }>(A, `select id from habits where user_id = auth.uid() and block = 'deporte' limit 1`)
     await expect(h.as(A, `select propose_change('me', 'habit.remove', jsonb_build_object('habit_id', $1::text))`, [dp.id])).rejects.toThrow(/deporte/)
     await expect(h.as(A, `select propose_change('me', 'habit.add', '{"name":"x","pillar":"cuerpo","block":"fuerza"}'::jsonb)`)).rejects.toThrow(/fuerza base/)
-    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('me', 'habit.add', '{"catalog_id":"leer_15","weight":1}'::jsonb) id`)
+    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('group', 'habit.add', '{"catalog_id":"leer_15","weight":1}'::jsonb) id`)
     await expect(h.as(A, `select vote_change($1, 'yes')`, [id])).rejects.toThrow(/propio/)
     await h.admin(`update change_requests set closes_at = now() - interval '1 minute' where id = $1`, [id])
     expect((await h.as<{ status: string }>(B, `select * from group_requests($1)`, [g]))[0].status).toBe('approved')
@@ -190,7 +190,7 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
   it('en grupo de 2 decide la otra persona: un "no" rechaza', async () => {
     await group(A, B)
     await h.as(A, `select create_initial_plan($1::jsonb)`, [habits])
-    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('me', 'habit.add', '{"catalog_id":"leer_15","weight":3}'::jsonb) id`)
+    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('group', 'habit.add', '{"catalog_id":"leer_15","weight":3}'::jsonb) id`)
     expect(await h.as<{ s: string }>(B, `select vote_change($1, 'no') s`, [id])).toEqual([{ s: 'rejected' }])
   })
 
@@ -304,20 +304,7 @@ describe('monedas, billetera y tienda', () => {
   })
 })
 
-describe('legado, ranking y configuración', () => {
-  it('días anteriores a la migración quedan congelados; el ranking los suma y los muestra aparte', async () => {
-    const g = await group(A, B)
-    await h.admin(`update groups set start_date = user_today($2) - 3 where id = $1`, [g, A])
-    await h.admin(`update group_members set joined_at = now() - interval '5 days'`)
-    await h.admin(`insert into user_game (user_id, v3_since) values ($1, user_today($1) - 1)`, [A])
-    await h.admin(`insert into legacy_days (user_id, day, points) values ($1, user_today($1) - 3, 75), ($1, user_today($1) - 2, 60)`, [A])
-    const { ids } = await plan(A, [{ name: 'a', weight: 1 }, { name: 'b', weight: 1 }, { name: 'c', weight: 1 }], 1)
-    for (const id of ids) await h.admin(`insert into habit_logs (habit_id, log_date) values ($1, user_today($2) - 1)`, [id, A])
-    const rows = await h.as<{ user_id: string; total_points: string; legacy_points: string }>(B, `select * from group_leaderboard($1)`, [g])
-    const a = rows.find((r) => r.user_id === A)!
-    expect([num(a.total_points), num(a.legacy_points)]).toEqual([235, 135])
-  })
-
+describe('ranking y configuración', () => {
   it('hora de corte: con dayCutoffHour = 24, "hoy" es ayer', async () => {
     const t = await today(A)
     await h.admin(`update game_config set value = '24'::jsonb where key = 'dayCutoffHour'`)
@@ -347,7 +334,7 @@ describe('legado, ranking y configuración', () => {
     await h.as(A, `select create_initial_plan('[{"catalog_id":"caminar_30","weight":1},{"catalog_id":"dia_sin_fumar","weight":3,"private":true},{"name":"Guitarra","pillar":"habilidades","weight":2},{"name":"Natación","pillar":"cuerpo","block":"deporte","weight":3}]'::jsonb, '[{"name":"Fumar"}]'::jsonb)`)
     const [a] = await h.as<{ habits: { name: string; weight: number }[]; vices: { name: string }[] }>(B, `select * from group_plans($1) where user_id = $2`, [g, A])
     const names = a.habits.map((x) => [x.name, x.weight])
-    expect(names).toEqual(expect.arrayContaining([['Hábito privado', 3], ['Guitarra', 2], ['Caminar 30 minutos', 1], ['Natación', 3], ['Flexiones', 1]]))
+    expect(names).toEqual(expect.arrayContaining([['Hábito privado', 3], ['Guitarra', 2], ['Caminar 30 minutos', 1], ['Natación', 3]]))
     expect(names.flat()).not.toContain('Día sin fumar')
     expect(a.vices[0].name).toBe('Vicio')
   })
@@ -362,46 +349,12 @@ describe('respaldo (005b) y sin migración', () => {
 
   it('no se migra: una cuenta con datos viejos no tiene plan hasta hacer el cuestionario', async () => {
     await h.admin(`insert into habits (user_id, name, catalog_id) values ($1, 'x', 'caminar_30')`, [A])
-    await h.db.exec(readMigration(MIGRATIONS[6]))
+    for (const m of MIGRATIONS.slice(6)) await h.db.exec(readMigration(m))
     expect((await h.one<{ has_plan: boolean }>(A, `select my_day() r`)).has_plan).toBe(false)
   })
 })
 
-describe('v4: fuerza base, nivel de entrenamiento y niveles', () => {
-  const base = JSON.stringify([{ name: 'Correr', pillar: 'cuerpo', weight: 2, block: 'deporte' }, { catalog_id: 'caminar_30', weight: 1 }])
-  const strength = (u: string, off = 0) => h.admin<{ name: string; target: string }>(
-    `select hb.name, ph.target from plan_habits ph join habits hb on hb.id = ph.habit_id
-     where ph.plan_id = plan_for($1, user_today($1) + $2::int) and hb.block = 'fuerza' order by hb.name`, [u, off])
-
-  it('la meta de cada ejercicio sale de config según el nivel de entrenamiento (supuesto 10-30-50-100)', async () => {
-    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', 2)`, [base])
-    expect((await strength(A)).map((x) => [x.name, Number(x.target)])).toEqual([['Dominadas', 50], ['Flexiones', 50], ['Sentadillas', 50]])
-    await h.as(B, `select create_initial_plan($1::jsonb)`, [base]) // sin declarar: nivel por defecto
-    expect((await strength(B)).map((x) => Number(x.target))).toEqual([10, 10, 10])
-  })
-
-  it('cambiar el nivel de entrenamiento se vota y rige desde mañana (hoy no se puede bajar la meta)', async () => {
-    const g = await group(A, B)
-    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', 3)`, [base])
-    await expect(h.as(A, `select propose_change('group', 'training.level', '{"level":0}'::jsonb)`)).rejects.toThrow(/personal/)
-    await expect(h.as(A, `select propose_change('me', 'training.level', '{"level":7}'::jsonb)`)).rejects.toThrow(/inválido/)
-    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('me', 'training.level', '{"level":0}'::jsonb) id`)
-    await h.as(B, `select vote_change($1, 'yes')`, [id])
-    expect((await strength(A, 0)).map((x) => Number(x.target))).toEqual([100, 100, 100])
-    expect((await strength(A, 1)).map((x) => Number(x.target))).toEqual([10, 10, 10])
-    const [{ tl }] = await h.admin<{ tl: number }>(`select training_level tl from plans where id = plan_for($1, user_today($1) + 1)`, [A])
-    expect(tl).toBe(0)
-    void g
-  })
-
-  it('15 de 10 flexiones cuenta 150 % (excedente al pool)', async () => {
-    await h.as(A, `select create_initial_plan('[{"name":"Correr","pillar":"cuerpo","block":"deporte","weight":1}]'::jsonb)`)
-    const ids = await h.admin<{ id: string; strength_id: string | null }>(`select id, strength_id from habits where user_id = $1`, [A])
-    for (const x of ids) await h.admin(`insert into habit_logs (habit_id, log_date, count) values ($1, user_today($2), $3)`, [x.id, A, x.strength_id === 'flexiones' ? 15 : x.strength_id ? 10 : 1])
-    // 4 hábitos de peso 1: (1,5 + 1 + 1 + 1) / 4 = 112,5 → 100 y 12,5 de excedente
-    expect(await score(A)).toMatchObject({ total: 100, overflow: 12.5 })
-  })
-
+describe('v4: niveles', () => {
   it('nivel 0 al empezar; experiencia = suma de puntos; 3 días perfectos = nivel 1 (300 provisional); SQL = TS', async () => {
     const { levelFor, totalXp } = await import('../src/game/levels')
     expect((await h.one<{ level: unknown }>(A, `select my_day() r`)).level).toEqual({ xp: 0, level: 0, xpIntoLevel: 0, xpForNext: 300, progress: 0 })
@@ -421,7 +374,7 @@ describe('v4: reiniciar y eliminar cuenta', () => {
 
   it('reiniciar: pide el usuario exacto, muestra qué se borra y deja la cuenta lista para empezar de cero', async () => {
     const g = await group(A, B)
-    await h.as(A, `select create_initial_plan($1::jsonb, '[{"name":"Fumar"}]'::jsonb, '[{"title":"Celular","chest":{"target":600}}]'::jsonb)`, [base])
+    await h.as(A, `select create_initial_plan($1::jsonb, '[{"name":"Fumar"}]'::jsonb, '[{"title":"Celular","chest":{"target":600}}]'::jsonb, '{"easy":true}'::jsonb)`, [base])
     const [hb] = await h.as<{ id: string }>(A, `select id from habits where user_id = auth.uid() and block = 'deporte'`)
     await h.as(A, `select set_habit_done($1, true)`, [hb.id])
     const [c] = await h.as<{ id: string }>(B, `insert into group_chests (group_id, title, target) values ($1, 'Viaje', 1000) returning id`, [g])
@@ -444,7 +397,7 @@ describe('v4: reiniciar y eliminar cuenta', () => {
   it('al reiniciar, una votación pendiente se recalcula sin sus votos', async () => {
     const g = await group(A, B, C)
     await h.as(A, `select create_initial_plan($1::jsonb)`, [base])
-    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('me', 'habit.add', '{"catalog_id":"leer_15","weight":1}'::jsonb) id`)
+    const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('group', 'habit.add', '{"catalog_id":"leer_15","weight":1}'::jsonb) id`)
     await h.as(B, `select vote_change($1, 'yes')`, [id]) // 1 de 2: pendiente
     await h.as(B, `select reset_my_data($1)`, [await uname(B)])
     expect(await h.admin(`select 1 from change_votes where request_id = $1`, [id])).toHaveLength(0)

@@ -1,4 +1,4 @@
-// @ts-nocheck — copia literal de modifications/reference/*.test.mjs (fuente de verdad del dueño); solo cambian los imports.
+// @ts-nocheck — copia literal de modifications/reference/scoring.test.mjs (fuente de verdad del dueño); solo cambian los imports.
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { dayPoints, slipPenalizes, weeklyPool } from '../../src/game/scoring';

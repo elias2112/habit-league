@@ -2,15 +2,14 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { errorMessage } from '../lib/errors'
 import { formatLongDate } from '../lib/date'
-import { rankLabel, signed, stageById, type JudgmentToday, type LeagueState } from '../lib/league'
-import LeagueBadge from './LeagueBadge'
+import { signed, type JudgmentToday } from '../lib/judgment'
 import { ErrorBox } from './ui'
 
 type Answer = boolean | number
-interface Result extends LeagueState { judgment_total: number }
+interface Result { judgment_total: number }
 
-/** Juicio del día sobre AYER, a pantalla completa. Los PL los calcula la base. */
-export default function Judgment({ data, before, onClose }: { data: JudgmentToday; before: LeagueState | null; onClose: (s?: LeagueState) => void }) {
+/** Juicio del día sobre AYER, a pantalla completa. El total lo calcula la base; por ahora no da premio. */
+export default function Judgment({ data, onClose }: { data: JudgmentToday; onClose: (done?: boolean) => void }) {
   const qs = data.questions
   const [step, setStep] = useState(-1) // -1 = resumen de hábitos; qs.length = enviar
   const [answers, setAnswers] = useState<Record<string, Answer>>({})
@@ -44,13 +43,12 @@ export default function Judgment({ data, before, onClose }: { data: JudgmentToda
 
         <div className="flex-1">
           {result ? (
-            <ResultView r={result} before={before} />
+            <ResultView r={result} />
           ) : step === -1 ? (
             <div>
-              <h1 className="text-2xl font-black">Ayer hiciste {data.habits_done} de {data.habits_total} hábitos</h1>
-              <p className="mt-2 text-muted">{data.points} puntos del día.</p>
-              <p className={`mt-6 text-5xl font-black tabular-nums ${data.habits_pl >= 0 ? 'text-alimentacion' : 'text-danger'}`}>{signed(data.habits_pl)} PL</p>
-              <p className="mt-2 text-sm text-muted">Más de 50 puntos suma, menos resta (hasta ±20). Ahora, unas preguntas rápidas: respondé con honestidad, es tu juego.</p>
+              <h1 className="text-2xl font-black">Ayer hiciste {data.points} puntos</h1>
+              <p className="mt-2 text-muted">Unas preguntas rápidas sobre ayer: respondé con honestidad, es tu juego.</p>
+              <p className="mt-4 rounded-xl bg-surface-2 px-3 py-2 text-sm text-muted">El Juicio queda registrado. Por ahora no da premio ni cambia tus puntos.</p>
             </div>
           ) : q ? (
             <QuestionView q={q} value={answers[q.id]} onChange={(v) => set(q.id, v)} onNext={next} chests={data.chests} chest={chest} onChest={setChest} />
@@ -65,7 +63,7 @@ export default function Judgment({ data, before, onClose }: { data: JudgmentToda
 
         <div className="mt-6 space-y-2">
           {result ? (
-            <button className="btn btn-primary w-full" onClick={() => onClose(result)}>Listo</button>
+            <button className="btn btn-primary w-full" onClick={() => onClose(true)}>Listo</button>
           ) : step === -1 ? (
             <button className="btn btn-primary w-full" onClick={next}>Empezar</button>
           ) : q ? (
@@ -159,22 +157,12 @@ function QuestionView({ q, value, onChange, onNext, chests, chest, onChest }: {
   )
 }
 
-function ResultView({ r, before }: { r: Result; before: LeagueState | null }) {
-  const moved = before && (before.stage !== r.stage || before.division !== r.division)
-  const up = before && moved && (stageById(r.stage) !== stageById(before.stage)
-    ? ['camello', 'leon', 'nino', 'zaratustra'].indexOf(r.stage) > ['camello', 'leon', 'nino', 'zaratustra'].indexOf(before.stage)
-    : r.division < before.division)
+function ResultView({ r }: { r: Result }) {
   return (
     <div className="text-center">
       <p className="text-sm font-semibold text-muted">Veredicto del Juicio</p>
       <p className={`mt-2 text-6xl font-black tabular-nums ${r.judgment_total >= 0 ? 'text-alimentacion' : 'text-danger'}`}>{signed(r.judgment_total)}</p>
-      <p className="text-sm text-muted">PL por tus respuestas (más los de tus hábitos de ayer)</p>
-      {moved && (
-        <p className={`mt-6 rounded-2xl border px-4 py-3 text-lg font-black ${up ? 'border-xp/50 bg-xp/10 text-xp' : 'border-danger/50 bg-danger/10 text-danger'}`}>
-          {up ? '⬆️ Subiste a ' : '⬇️ Bajaste a '}{stageById(r.stage).emoji} {rankLabel(r.stage, r.division)}
-        </p>
-      )}
-      <div className="card mt-6 text-left"><LeagueBadge s={r} /></div>
+      <p className="mt-2 text-sm text-muted">Queda registrado. Por ahora no da premio.</p>
     </div>
   )
 }

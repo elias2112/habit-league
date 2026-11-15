@@ -1,7 +1,7 @@
 {
-  "version": "0.1-borrador",
-  "status": "BORRADOR — pendiente de revisión del dueño (docs/PROPUESTA_CONTENIDO_V4.md). No publicar sin OK.",
-  "note": "Textos del cuestionario v4. Objetivos a partir de las plantillas de content/goals.json más 'Dejar de fumar'. Sin datos, estudios ni plazos inventados: los plazos los pone la persona.",
+  "version": "0.2-borrador",
+  "status": "BORRADOR — pendiente de revisión del dueño (docs/PROPUESTA_CONTENIDO_V4.md). Los 5 chistes y q10/q12 los aprobó el dueño (2026-11-15).",
+  "note": "Textos del cuestionario v4.2. Los números de las reglas (monedas, experiencia, porcentajes, repeticiones) NO van acá: la app los toma de content/config.json y reemplaza {marcas}.",
   "clearGoal": {
     "text": "¿Tenés un objetivo claro para estos días?",
     "yes": "Sí, sé lo que quiero",
@@ -234,38 +234,118 @@
       "otro"
     ]
   },
-  "training": {
-    "text": "¿Cuánto entrenás hoy?",
-    "hint": "Define tu fuerza base diaria (flexiones, sentadillas y dominadas). Se pueden hacer en varias series. No es un consejo médico ni de entrenamiento.",
-    "options": [
-      {
-        "level": 0,
-        "text": "No entreno"
-      },
-      {
-        "level": 1,
-        "text": "Me muevo a veces"
-      },
-      {
-        "level": 2,
-        "text": "Entreno 1 o 2 veces por semana"
-      },
-      {
-        "level": 3,
-        "text": "Entreno 3 o más veces por semana"
-      }
-    ]
-  },
   "sport": {
     "text": "¿Qué deporte o actividad física vas a hacer?",
     "hint": "Todos tienen uno. Escribí el tuyo y, si querés, una meta con número.",
     "placeholder": "Ej.: correr, gimnasio, fútbol, natación"
   },
   "generalDefaults": {
-    "note": "Hábitos generales por defecto para todos (pedido del dueño, 2026-11-14). La fuerza base (flexiones, sentadillas, dominadas) va aparte.",
+    "note": "Hábitos generales por defecto para todos (pedido del dueño, 2026-11-14). La fuerza base (flexiones, sentadillas y plancha) va aparte.",
     "habits": [
       "hacer_cama",
       "respirar_5"
     ]
+  },
+  "sections": [
+    {
+      "id": "objetivos",
+      "name": "Objetivos"
+    },
+    {
+      "id": "fuerza",
+      "name": "Fuerza"
+    },
+    {
+      "id": "vos",
+      "name": "Vos"
+    },
+    {
+      "id": "habitos",
+      "name": "Hábitos"
+    }
+  ],
+  "strength": {
+    "title": "Fuerza base",
+    "intro": "Más allá del entrenamiento, ¿te animás a hacer aparte todos los días flexiones, sentadillas y plancha?",
+    "questions": {
+      "flexiones": "¿Cuántas flexiones podés hacer por día?",
+      "sentadillas": "¿Cuántas sentadillas podés hacer por día?",
+      "plancha": "¿Cuántos segundos de plancha aguantás por día?"
+    },
+    "lessThanStep": "Menos de {step}",
+    "suggestion": "Tu meta: {target} (un escalón más de lo que hacés hoy). Podés ajustarla.",
+    "easy": "Para quien todavía no llega a {step}, hay una variante más fácil, con meta {easyTarget}:",
+    "easyAccept": "Empiezo con la variante fácil",
+    "rulesTitle": "Antes de aceptar, cómo funciona",
+    "rules": [
+      "Es un compromiso de todos los días. Se puede hacer en varias series.",
+      "Cada día seguido dentro de la semana paga más: {coinsChain} monedas y {expChain} de experiencia; desde el día {capDay} se queda en el máximo. Cada semana la cadena vuelve a empezar.",
+      "Tu meta lo multiplica: ×({rewardBase} + meta/{rewardDivisor}).",
+      "Si llegás al {forgivePct} % de la meta en cada ejercicio, el día se perdona: la cadena sigue y cobrás en proporción.",
+      "Con menos, el día cuenta como fallado y la cadena vuelve a cero. Para saldarlo elegís: hacer {extraReps} repeticiones extra del ejercicio fallado, o pagar las monedas y la experiencia que perdiste. Hasta saldarlo, la fuerza base no paga.",
+      "Después, la meta se cambia con una propuesta que vota el grupo.",
+      "No es un consejo médico ni de entrenamiento."
+    ],
+    "accept": "Me comprometo",
+    "decline": "No quiero",
+    "jokes": [
+      "¿Seguro? Las flexiones no muerden… bueno, un poquito. ¿Arrancamos con 10?",
+      "Ok, pero que conste en actas: el grupo se va a enterar 😏. ¿Probás con la variante fácil?",
+      "Respetamos tu decisión… y la vamos a recordar en cada juntada. ¿Una chance más?",
+      "Hasta el sillón hace más fuerza que vos ahora mismo, y eso que es un sillón. ¿10 y listo?",
+      "Nadie se arrepintió nunca de 10 sentadillas. Bueno, capaz alguien. ¿Vos querés ser esa persona?"
+    ],
+    "retry": "Dale, la hago",
+    "skip": "Sigo sin fuerza base"
+  },
+  "areas": {
+    "text": "¿Cuánto te pasa con cada una de estas cosas?",
+    "hint": "Es privado: el grupo no lo ve. Cambia el precio de esas cosas en tu tienda (poco ×{poco}, mucho ×{mucho}). Se contesta una sola vez.",
+    "options": [
+      {
+        "id": "no",
+        "text": "No"
+      },
+      {
+        "id": "poco",
+        "text": "Poco"
+      },
+      {
+        "id": "mucho",
+        "text": "Mucho"
+      }
+    ],
+    "items": [
+      {
+        "id": "tabaco",
+        "text": "Fumar o vapear"
+      },
+      {
+        "id": "alcohol",
+        "text": "Alcohol"
+      },
+      {
+        "id": "comida",
+        "text": "Comida chatarra o delivery"
+      },
+      {
+        "id": "dulce",
+        "text": "Dulces"
+      },
+      {
+        "id": "redes",
+        "text": "Redes sociales"
+      },
+      {
+        "id": "juegos",
+        "text": "Videojuegos (PC, consola)"
+      }
+    ]
+  },
+  "freeText": {
+    "title": "Para conocerte un poco más",
+    "hint": "Opcional. Es privado y no suma puntos.",
+    "free": "¿Qué hacés habitualmente en tu día libre?",
+    "wish": "¿Qué te gustaría hacer?"
   }
 }

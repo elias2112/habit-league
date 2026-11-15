@@ -1,14 +1,16 @@
-// Experiencia y nivel (porta reference/levels.mjs). Nada se guarda: la experiencia es la suma de los puntos
-// diarios ya recalculados y el nivel se deriva. Valores PROVISIONALES (content/config.json → levels).
+// Experiencia y nivel (porta reference/levels.mjs v4.2). Nada se guarda: la experiencia es la suma de los totales
+// personales de cada día más la experiencia de la fuerza base, menos la pagada por días fallados; mínimo 0.
+// El nivel PUEDE bajar. Valores PROVISIONALES (content/config.json → levels).
 import { CONFIG } from './config'
 import { r2 } from './scoring'
 
 export const xpOfDay = (total: number) => Math.max(0, total)
 
-/** dailyTotals: total de cada día (salida de dayPoints().total). */
-export const totalXp = (dailyTotals: number[]) => r2(dailyTotals.reduce((s, t) => s + xpOfDay(t), 0))
+/** dailyTotals: total personal de cada día. bonus: exp de fuerza base; penalty: exp perdida por días fallados (positivo). */
+export const totalXp = (dailyTotals: number[], { bonus = 0, penalty = 0 }: { bonus?: number; penalty?: number } = {}) =>
+  Math.max(0, r2(dailyTotals.reduce((s, t) => s + xpOfDay(t), 0) + bonus - penalty))
 
-/** Nivel 0 al empezar. Como la experiencia solo suma, el nivel no baja. */
+/** Nivel 0 al empezar. */
 export function levelFor(xp: number) {
   const per = CONFIG.xpPerLevel
   const level = Math.floor(xp / per)

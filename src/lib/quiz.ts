@@ -112,26 +112,6 @@ export function computeProfile(answers: Answers): QuizResult {
   return { axes, code, archetype: arch.id, priority, level, areas, habits }
 }
 
-/** Hábitos que sugieren las preguntas directas (q21–q24), sin repetir y en orden. */
-export function directSuggestions(answers: Answers): string[] {
-  const out: string[] = []
-  for (const q of QUESTIONS.filter((x) => x.section === 'directas')) {
-    const o = q.options.find((x) => asList(answers[q.id]).includes(x.id))
-    for (const id of o?.suggest ?? []) if (!out.includes(id) && catalogById(id)) out.push(id)
-  }
-  return out
-}
-
-/** Vicios que sugieren declarar las preguntas directas (ej. fumar todos los días sin querer dejar). */
-export function directVices(answers: Answers): string[] {
-  const out: string[] = []
-  for (const q of QUESTIONS.filter((x) => x.section === 'directas')) {
-    const o = q.options.find((x) => asList(answers[q.id]).includes(x.id))
-    if (o?.vice && !out.includes(o.vice)) out.push(o.vice)
-  }
-  return out
-}
-
 /** Puntos que vale cada hábito hoy: 100 × tier / suma de tiers activos (misma regla que la base). */
 export function pointsFor(tier: number, activeTiers: number[]): number {
   const sum = activeTiers.reduce((a, b) => a + b, 0)

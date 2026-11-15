@@ -8,10 +8,10 @@ import { MIN_ACTIVE_HABITS, archetypeById, catalogById } from '../lib/quiz'
 import { uploadEvidence } from '../lib/photos'
 import { completionOf, fmtCoins, useMyDay, type DayHabit, type DayVice } from '../lib/day'
 import { CONFIG } from '../game/config'
-import { signed, useLeague, type JudgmentToday } from '../lib/league'
+import { signed, type JudgmentToday } from '../lib/judgment'
 import EvidencePhoto from '../components/EvidencePhoto'
 import Judgment from '../components/Judgment'
-import LeagueBadge from '../components/LeagueBadge'
+import StrengthPanel from '../components/StrengthPanel'
 import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, PillarIcon, Weight } from '../components/ui'
 
 const CheckIcon = () => (
@@ -27,6 +27,21 @@ const BLOCKS = [
 ] as const
 const fmtMult = (m: number) => `×${m.toLocaleString('es-ES', { maximumFractionDigits: 2 })}`
 
+/** Aviso discreto cuando sube el tope de la meta de fuerza base (cada 10 niveles). Se recuerda en este dispositivo. */
+function useCapNotice(cap: number | undefined) {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!cap) return
+    try {
+      const seen = Number(localStorage.getItem('hl:strengthCap') ?? String(CONFIG.strengthTargetMax))
+      if (cap > seen) setShow(true)
+      else localStorage.setItem('hl:strengthCap', String(cap))
+    } catch { /* sin almacenamiento */ }
+  }, [cap])
+  const dismiss = () => { setShow(false); try { localStorage.setItem('hl:strengthCap', String(cap)) } catch { /* sin almacenamiento */ } }
+  return { show, dismiss }
+}
+
 export default function Today() {
   const { session, profile } = useAuth()
   const me = session!.user.id
@@ -34,9 +49,9 @@ export default function Today() {
   const [streak, setStreak] = useState(0)
   const [busy, setBusy] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
-  const league = useLeague()
   const [judgment, setJudgment] = useState<JudgmentToday | null>(null)
   const [judging, setJudging] = useState(false)
+  const capNotice = useCapNotice(day?.strength_cap)
 
   useEffect(() => {
     supabase.rpc('user_streak', { p_user: me }).then(({ data }) => setStreak((data as number) ?? 0))
@@ -45,19 +60,17 @@ export default function Today() {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [me, reload, day?.score.total])
 
-  // El Juicio de ayer (liga): se abre solo una vez por día; si se cierra, queda la tarjeta.
-  useEffect(() => {
-    if (!league.state) return
-    supabase.rpc('judgment_today').then(({ data }) => {
-      const j = data as JudgmentToday | null
-      if (!j) return
-      setJudgment(j)
-      const key = 'hl:judgmentPrompted:' + j.day
-      let prompted = false
-      try { prompted = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1') } catch { /* sin almacenamiento */ }
-      if (j.available && !j.submitted && !prompted) setJudging(true)
-    })
-  }, [league.state])
+  // El Juicio de ayer: se abre solo una vez por día; si se cierra, queda el botón.
+  const loadJudgment = () => supabase.rpc('judgment_today').then(({ data }) => {
+    const j = data as JudgmentToday | null
+    if (!j) return
+    setJudgment(j)
+    const key = 'hl:judgmentPrompted:' + j.day
+    let prompted = false
+    try { prompted = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1') } catch { /* sin almacenamiento */ }
+    if (j.available && !j.submitted && !prompted) setJudging(true)
+  })
+  useEffect(() => { void loadJudgment() }, [])
 
   async function run(key: string, fn: () => PromiseLike<{ error: unknown }>) {
     if (busy.has(key)) return
@@ -91,6 +104,7 @@ export default function Today() {
   const arch = archetypeById(profile?.archetype)
   const s = day.score
   const doneCount = day.habits.filter((h) => completionOf(h) >= 1).length
+  const hasSoloYo = day.habits.some((h) => h.scope === 'solo-yo') || day.vices.some((v) => v.scope === 'solo-yo')
 
   return (
     <>
@@ -102,55 +116,39 @@ export default function Today() {
           <button className="px-1 text-lg leading-none" aria-label="Cerrar aviso" onClick={() => run(n.id, () => supabase.rpc('dismiss_notice', { p_id: n.id }))}>×</button>
         </div>
       ))}
-
-      {day.has_plan && !day.habits.some((h) => h.block === 'fuerza') && (
-        <div className="mb-3 rounded-xl border border-primary/50 bg-primary/10 px-3 py-2 text-sm">
-          <b>Hay una versión nueva del juego</b> (niveles, fuerza base, objetivos). Para jugarla, empezá de cero desde{' '}
-          <Link to="/perfil" className="font-semibold text-primary underline">Perfil → Cuenta</Link>. Tu progreso actual vuelve a cero.
+      {capNotice.show && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs text-muted">
+          <span className="flex-1">Nivel {day.level.level}: el tope de tu meta de fuerza base ahora es {day.strength_cap}.</span>
+          <button className="px-1 text-base leading-none" aria-label="Cerrar aviso" onClick={capNotice.dismiss}>×</button>
         </div>
       )}
-
       {tzMismatch && (
-        <p className="mb-4 rounded-xl border border-xp/40 bg-xp/10 px-3 py-2 text-sm text-xp">
+        <p className="mb-3 rounded-xl border border-xp/40 bg-xp/10 px-3 py-2 text-sm text-xp">
           Tu perfil usa la zona <b>{profile.timezone}</b> y este dispositivo está en <b>{deviceTz}</b>. <Link to="/perfil" className="underline">Cambiar</Link>
         </p>
       )}
 
-      {league.state && (
-        <section className="card mb-3">
-          <LeagueBadge s={league.state} />
-          {judgment?.available && (judgment.submitted ? (
-            <p className="mt-3 text-sm text-muted">⚖️ Juicio de ayer: <b className={(judgment.total ?? 0) >= 0 ? 'text-alimentacion' : 'text-danger'}>{signed(judgment.total ?? 0)} PL</b></p>
-          ) : (
-            <button className="btn btn-primary mt-3 w-full" onClick={() => setJudging(true)}>⚖️ Responder el Juicio de ayer</button>
-          ))}
-        </section>
-      )}
-      {judging && judgment && (
-        <Judgment data={judgment} before={league.state} onClose={(st) => {
-          setJudging(false)
-          if (st) { league.setState(st); void supabase.rpc('judgment_today').then(({ data }) => setJudgment(data as JudgmentToday)) }
-        }} />
-      )}
-
-      {/* Nivel (experiencia = suma de tus puntos diarios; valores provisionales) */}
-      <section className="card mb-3">
-        <div className="flex items-baseline justify-between">
-          <span className="text-2xl font-black">Nivel {day.level.level}</span>
-          <span className="text-xs tabular-nums text-muted">{Math.round(day.level.xpIntoLevel)} / {day.level.xpForNext} de experiencia</span>
-        </div>
-        <div className="mt-2"><Bar value={day.level.xpIntoLevel} max={day.level.xpForNext} className="bg-primary" /></div>
-        <p className="mt-1 text-xs text-muted">Cada punto del día suma experiencia. El nivel nunca baja.</p>
-      </section>
-
-      {/* Puntaje y monedas */}
+      {/* Resumen: nivel y rango, puntos de hoy y monedas, en una sola tarjeta */}
       <section className="card mb-5">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-semibold text-muted">Puntos de hoy</span>
-          <span className="text-sm text-muted">{doneCount}/{day.habits.length} completos</span>
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-lg font-black">Nivel {day.level.level} <span className="ml-1 rounded-lg bg-surface-2 px-2 py-0.5 text-xs font-bold text-primary">{day.rank.name}</span></span>
+          <span className="text-xs tabular-nums text-muted">{Math.round(day.level.xpIntoLevel)} / {day.level.xpForNext} exp</span>
         </div>
-        <div className="mt-1 text-5xl font-black tabular-nums text-xp">
-          {Math.round(s.total)}<span className="text-xl font-bold text-muted"> / 100</span>
+        <div className="mt-1.5"><Bar value={day.level.xpIntoLevel} max={day.level.xpForNext} className="bg-primary" /></div>
+        <p className="mt-1 text-[11px] text-muted">
+          {day.rank.next ? `${day.rank.missing} ${day.rank.missing === 1 ? 'día activo' : 'días activos'} más para ${day.rank.next.name}. ` : ''}
+          Si pagás un día de fuerza base fallado, perdés esa experiencia y el nivel puede bajar.
+        </p>
+
+        <div className="mt-4 flex items-end justify-between border-t border-line pt-3">
+          <div>
+            <span className="text-xs font-semibold text-muted">Puntos de hoy · {doneCount}/{day.habits.length}</span>
+            <div className="text-4xl font-black tabular-nums text-xp">{Math.round(s.total)}<span className="text-lg font-bold text-muted"> / 100</span></div>
+          </div>
+          <Link to="/tienda" className="mb-1 text-right text-sm">
+            <span className="block text-xs text-muted">Billetera</span>
+            <b className={day.wallet.balance < 0 ? 'text-danger' : 'text-primary'}>🪙 {fmtCoins(day.wallet.balance)} ›</b>
+          </Link>
         </div>
         {(s.bonus > 0 || s.multiplier < 1 || s.overflow > 0) && (
           <p className="mt-1 text-xs text-muted tabular-nums">
@@ -160,26 +158,30 @@ export default function Today() {
             {s.overflow > 0 && <> · <b className="text-xp">+{Math.round(s.overflow)}</b> de excedente al pool</>}
           </p>
         )}
-        <div className="mt-3"><Bar value={s.total} max={100} /></div>
-        <div className="mt-3 flex items-center justify-between gap-2 rounded-xl bg-surface-2 px-3 py-2 text-sm">
-          <span>
-            🪙 Hoy: <b className="text-xp">{fmtCoins(day.wallet.today_credit)}</b>
-            <span className="text-muted"> ({s.total >= CONFIG.coinThresholdHigh ? 'llegaste a 100' : s.total >= CONFIG.coinThresholdLow ? `${CONFIG.coinThresholdHigh} da más` : `desde ${CONFIG.coinThresholdLow} puntos`}{day.wallet.today_multiplier > 1 ? `, ${fmtMult(day.wallet.today_multiplier)} por racha` : ''})</span>
-          </span>
-          <Link to="/tienda" className="shrink-0 font-semibold text-primary">Billetera {fmtCoins(day.wallet.balance)} ›</Link>
-        </div>
-        {arch && <p className="mt-2 text-xs text-muted">{arch.name} · {arch.tagline}</p>}
+        <div className="mt-2"><Bar value={s.total} max={100} /></div>
+        {hasSoloYo && Math.round(s.ranking.total) !== Math.round(s.total) && (
+          <p className="mt-1 text-xs text-muted">Para el ranking del grupo cuentan {Math.round(s.ranking.total)} (sin tus hábitos «solo yo»).</p>
+        )}
+        <p className="mt-2 text-xs text-muted">
+          🪙 Hoy: <b className="text-xp">{fmtCoins(day.wallet.today_credit)}</b>{' '}
+          ({s.total >= CONFIG.coinThresholdHigh ? 'llegaste a 100' : s.total >= CONFIG.coinThresholdLow ? `${CONFIG.coinThresholdHigh} da más` : `desde ${CONFIG.coinThresholdLow} puntos`}{day.wallet.today_multiplier > 1 ? `, ${fmtMult(day.wallet.today_multiplier)} por racha` : ''})
+          {arch && <> · {arch.name}</>}
+        </p>
+        {judgment?.available && (judgment.submitted
+          ? <p className="mt-2 text-xs text-muted">⚖️ Juicio de ayer: <b>{signed(judgment.total ?? 0)}</b></p>
+          : <button className="btn btn-ghost mt-3 w-full text-sm" onClick={() => setJudging(true)}>⚖️ Responder el Juicio de ayer</button>)}
       </section>
+      {judging && judgment && <Judgment data={judgment} onClose={(done) => { setJudging(false); if (done) void loadJudgment() }} />}
 
       <ErrorBox>{error}</ErrorBox>
 
       {!day.has_plan ? (
-        <Empty>Todavía no tenés plan. <Link to="/quiz" className="font-semibold text-primary">Hacé el quiz</Link></Empty>
+        <Empty>Todavía no tenés plan. <Link to="/quiz" className="font-semibold text-primary">Hacé el cuestionario</Link></Empty>
       ) : (
         <>
           {day.habits.length < MIN_ACTIVE_HABITS && (
             <p className="mb-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
-              Necesitás al menos {MIN_ACTIVE_HABITS} hábitos. <Link to="/habitos" className="font-semibold text-primary underline">Proponé uno</Link>
+              Necesitás al menos {MIN_ACTIVE_HABITS} hábitos. <Link to="/habitos" className="font-semibold text-primary underline">Agregá uno</Link>
             </p>
           )}
           {BLOCKS.map((b) => {
@@ -188,17 +190,18 @@ export default function Today() {
             return (
               <section key={b.id} className="mb-5">
                 <h2 className="mb-2 font-bold">{b.title}</h2>
-                {b.id === 'fuerza' && <p className="mb-2 text-xs text-muted">Para todos, según tu nivel de entrenamiento. Se puede hacer en varias series. No es consejo médico ni de entrenamiento.</p>}
+                {b.id === 'fuerza' && <StrengthPanel s={day.strength} onChange={() => void reload()} />}
                 <ul className="space-y-2.5">
                   {hs.map((h) => <HabitRow key={h.id} h={h} busy={busy.has(h.id)} onToggle={() => toggle(h)} onAdd={(d) => add(h, d)} onPhoto={(f) => photo(h, f)} />)}
                 </ul>
+                {b.id === 'fuerza' && <p className="mt-2 text-xs text-muted">Se puede hacer en varias series. No es consejo médico ni de entrenamiento.</p>}
               </section>
             )
           })}
 
           {day.vices.length > 0 && (
-            <section className="mt-6">
-              <h2 className="mb-2 font-bold">Vicios de hoy</h2>
+            <section className="mb-5">
+              <h2 className="mb-2 font-bold">🚭 Vicios de hoy</h2>
               <p className="mb-3 text-xs text-muted">
                 "No lo hice" suma; "Lo hice" multiplica tus puntos por su gravedad (salvo que tengas un permiso); sin marcar no suma ni resta.
               </p>

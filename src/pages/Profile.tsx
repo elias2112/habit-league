@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import { archetypeById } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
 import { MyRadar } from '../components/MyRadar'
-import LeagueSettings from '../components/LeagueSettings'
+import JudgmentSettings from '../components/JudgmentSettings'
 import AccountDanger from '../components/AccountDanger'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 
@@ -88,7 +88,7 @@ export default function Profile() {
       )}
       <Link to="/quiz" className="btn btn-ghost mt-3 w-full">{arch ? 'Repetir el quiz' : 'Hacer el quiz'}</Link>
 
-      <LeagueSettings />
+      <JudgmentSettings />
 
       <ChangePassword />
 

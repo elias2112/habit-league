@@ -5,7 +5,7 @@ import { errorMessage } from '../lib/errors'
 import { todayIn } from '../lib/date'
 import { GOAL_KINDS, detectKind, goalKind, planGoal, type GoalKind } from '../lib/goals'
 import type { Goal } from '../lib/types'
-import judgmentData from '../../content/judgment.json'
+import { CONFIG } from '../game/config'
 import { AreaIcon, Bar, Empty, ErrorBox, Spinner, Tier } from './ui'
 
 const fmt = (n: number) => Math.round(n).toLocaleString('es-ES')
@@ -193,26 +193,30 @@ export default function Goals() {
       {creating ? (
         <section className="card mb-4"><GoalForm onDone={() => { setCreating(false); void load() }} onCancel={() => setCreating(false)} /></section>
       ) : (
-        <button className="btn btn-primary mb-4 w-full" onClick={() => setCreating(true)}>+ Nuevo objetivo</button>
+        <button className="btn btn-primary mb-4 w-full" onClick={() => setCreating(true)}>+ Nuevo cofre de ahorro</button>
       )}
       {goals.filter((g) => g.kind === 'ahorro').length === 0 && !creating && (
         <Empty>
-          Un cofre es plata real que juntás para algo (un celular, un viaje). Te armamos el hábito diario de ahorro y una barra. No se mezcla con las monedas del juego.
+          Todavía no tenés cofres. Un cofre aparece cuando tenés un objetivo de ahorro: plata real que juntás para algo (un celular, un viaje).
         </Empty>
       )}
       <ul className="space-y-2">{goals.filter((g) => g.kind === 'ahorro').map((g) => <GoalCard key={g.id} g={g} onChange={load} />)}</ul>
-      <p className="mt-4 text-xs text-muted">
-        La barra suma lo que marcás en el hábito del objetivo (cada check de ahorro = la cuota diaria; páginas y palabras, lo que cargues) más lo que agregues a mano.
-      </p>
+      <section className="card mt-5 space-y-2 text-sm">
+        <h2 className="font-bold">¿Cómo funcionan los cofres?</h2>
+        <p className="text-muted">Tu cofre es un <b className="text-ink">objetivo de ahorro</b>: la plata real la guardás vos; la app solo lleva la cuenta. No se mezcla con las monedas del juego.</p>
+        <p className="text-muted">La barra suma cada check del hábito «Ahorrar…» (la cuota diaria), lo que agregues a mano y lo que contestes que ahorraste en el Juicio de la mañana.</p>
+        <p className="text-muted">Premios en monedas del juego: al llegar al {MILESTONES.join(', ')} % ganás {MILESTONES.map((m) => MILESTONE_COINS[m]).join(', ')} monedas. Y cada semana cerrada en la que ahorraste algo y no gastaste de más (según el Juicio) suma {CONFIG.chestWeeklySafeBonus} {CONFIG.chestWeeklySafeBonus === 1 ? 'moneda' : 'monedas'}: «Cofre a salvo».</p>
+        <p className="text-muted">El cofre del grupo está en la pestaña Grupo: ahí cada miembro anota cuánto puso; no mueve monedas del juego.</p>
+      </section>
     </>
   )
 }
 
-const MILESTONE_PL = Object.fromEntries(Object.entries(judgmentData.league.milestones).map(([k, v]) => [Number(k), v])) as Record<number, number>
-const MILESTONES = Object.keys(MILESTONE_PL).map(Number).sort((a, b) => a - b)
+const MILESTONE_COINS = Object.fromEntries(Object.entries(CONFIG.chestMilestones).map(([k, v]) => [Number(k), v])) as Record<number, number>
+const MILESTONES = Object.keys(MILESTONE_COINS).map(Number).sort((a, b) => a - b)
 
-/** Cofre de ahorro: se llena de monedas; cada hito (25/50/75/100 %) da PL en la liga una sola vez. */
-export function Chest({ pct }: { pct: number }) {
+/** Cofre de ahorro: barra de lo juntado; cada hito (25/50/75/100 %) da monedas del juego (content/config.json → chests). */
+export function Chest({ pct, rewards = true }: { pct: number; rewards?: boolean }) {
   const coins = Math.round(pct / 10)
   return (
     <div className="mt-3">
@@ -230,7 +234,7 @@ export function Chest({ pct }: { pct: number }) {
       </div>
       <div className="mt-1 grid grid-cols-4 text-center text-[11px]">
         {MILESTONES.map((m) => (
-          <span key={m} className={pct >= m ? 'font-bold text-xp' : 'text-muted'}>{pct >= m ? '✓ ' : ''}{m}% · +{MILESTONE_PL[m]} PL</span>
+          <span key={m} className={pct >= m ? 'font-bold text-xp' : 'text-muted'}>{pct >= m ? '✓ ' : ''}{m}%{rewards ? ` · +${MILESTONE_COINS[m]} 🪙` : ''}</span>
         ))}
       </div>
     </div>
