@@ -81,7 +81,7 @@ export default function Ranking() {
       {loading ? (
         <div className="grid place-items-center pt-10"><Spinner /></div>
       ) : (
-        <ol className="space-y-2">
+        <ol className="stagger space-y-2">
           {rows.map((r, i) => {
             const isMe = r.user_id === me
             const arch = archetypeById(r.archetype)

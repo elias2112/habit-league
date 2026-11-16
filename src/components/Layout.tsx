@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import InstallHint from './InstallHint'
 
 const tabs = [
@@ -11,30 +11,38 @@ const tabs = [
 ]
 
 export default function Layout() {
+  const { pathname } = useLocation()
   return (
     <div className="mx-auto min-h-screen max-w-md">
       <main className="px-4 pb-28" style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}>
         <InstallHint />
-        <Outlet />
+        {/* Cada pestaña entra con una transición. */}
+        <div key={pathname} className="page-in"><Outlet /></div>
       </main>
       <nav
-        className="fixed inset-x-0 bottom-0 border-t border-line bg-bg/95 backdrop-blur"
+        className="fixed inset-x-0 bottom-0 border-t border-line/70 bg-bg/85 backdrop-blur-xl"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <ul className="mx-auto grid max-w-md grid-cols-6">
+        <ul className="mx-auto grid max-w-md grid-cols-6 px-1">
           {tabs.map((t) => (
             <li key={t.to}>
               <NavLink
                 to={t.to}
                 end={t.to === '/'}
                 className={({ isActive }) =>
-                  `flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${isActive ? 'text-primary' : 'text-muted'}`
+                  `group flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-colors ${isActive ? 'text-primary' : 'text-muted'}`
                 }
               >
-                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d={t.icon} />
-                </svg>
-                {t.label}
+                {({ isActive }) => (
+                  <>
+                    <span className={`grid h-8 w-12 place-items-center rounded-full transition-all duration-300 ${isActive ? 'bg-primary/20 scale-105' : 'scale-100'}`}>
+                      <svg viewBox="0 0 24 24" className={`h-6 w-6 ${isActive ? 'bounce-in' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d={t.icon} />
+                      </svg>
+                    </span>
+                    {t.label}
+                  </>
+                )}
               </NavLink>
             </li>
           ))}

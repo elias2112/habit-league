@@ -74,7 +74,7 @@ function Shell({ children, footer, onBack, section, frac = 0.5, screen }: {
 
 const Option = ({ on, onClick, children }: { on?: boolean; onClick: () => void; children: ReactNode }) => (
   <button onClick={onClick} aria-pressed={on}
-    className={`flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left font-medium transition active:scale-[.99] ${on ? 'border-primary bg-primary/15' : 'border-line bg-surface'}`}>
+    className={`flex min-h-14 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left font-medium transition-all duration-200 active:scale-[.97] ${on ? 'pop border-primary bg-primary/15 shadow-[0_8px_24px_-14px_var(--color-primary)]' : 'border-line bg-surface hover:border-primary/40'}`}>
     {children}
   </button>
 )
@@ -193,7 +193,7 @@ export default function Onboarding() {
         <Shell onBack={back} section="objetivos" frac={objFrac} screen="clear-goal">
           <h1 className="pt-2 text-3xl font-black tracking-tight">{ONB.clearGoal.text}</h1>
           <p className="mt-2 text-muted">Empezás en nivel 0 y subís con lo que hacés cada día.</p>
-          <div className="mt-8 space-y-3">
+          <div className="stagger mt-8 space-y-3">
             <Option onClick={() => go({ ...d, s: { ...d.s, hasClearGoal: true } })}>{ONB.clearGoal.yes}</Option>
             <Option onClick={() => go({ ...d, s: { ...d.s, hasClearGoal: false } })}>{ONB.clearGoal.no}</Option>
           </div>
@@ -205,7 +205,7 @@ export default function Onboarding() {
         <Shell onBack={back} section="objetivos" frac={objFrac} screen="area">
           <h1 className="text-2xl font-bold">{ONB.area.text}</h1>
           <p className="mt-1 text-sm text-muted">{ONB.area.hint}</p>
-          <div className="mt-6 space-y-2.5">
+          <div className="stagger mt-6 space-y-2.5">
             {PILLARS.map((p) => <Option key={p.id} onClick={() => go({ ...d, s: { ...d.s, area: p.id } })}><PillarIcon pillar={p.id} size="sm" />{p.name}</Option>)}
           </div>
         </Shell>
@@ -215,7 +215,7 @@ export default function Onboarding() {
       return (
         <Shell onBack={back} section="objetivos" frac={objFrac} screen="friction">
           <h1 className="text-2xl font-bold">{ONB.friction.text}</h1>
-          <div className="mt-6 space-y-2.5">
+          <div className="stagger mt-6 space-y-2.5">
             {ONB.friction.options.map((o) => <Option key={o.id} onClick={() => go({ ...d, s: { ...d.s, friction: o.id } })}>{o.text}</Option>)}
           </div>
         </Shell>
@@ -238,7 +238,7 @@ export default function Onboarding() {
           <h1 className="text-2xl font-bold">{title.text}</h1>
           <p className="mt-1 text-sm text-muted">{title.hint}</p>
           <ErrorBox>{error}</ErrorBox>
-          <div className="mt-6 space-y-2.5">
+          <div className="stagger mt-6 space-y-2.5">
             {list.map((id) => {
               const o = objectiveDef(id)
               return (
@@ -297,9 +297,9 @@ export default function Onboarding() {
         return (
           <Shell onBack={() => setJoke(null)} section="fuerza" frac={0.3} screen="joke">
             <div className="pt-8 text-center">
-              <div className="text-5xl" aria-hidden>🤨</div>
+              <div className="bounce-in text-6xl" aria-hidden>🤨</div>
               <p className="mt-5 text-xl font-bold leading-snug">{joke}</p>
-              <div className="mt-8 space-y-3">
+              <div className="stagger mt-8 space-y-3">
                 <button className="btn btn-primary w-full" onClick={() => setJoke(null)}>{ST.retry}</button>
                 <button className="btn btn-ghost w-full" onClick={() => go({ ...d, s: { ...d.s, strength: 'declined' } })}>{ST.skip}</button>
               </div>
@@ -412,7 +412,7 @@ export default function Onboarding() {
         footer={q.type === 'multi' ? <button className="btn btn-primary w-full" disabled={!isAnswered(q, d.quiz)} onClick={() => advance(d.quiz)}>Siguiente</button> : undefined}>
         <p className="mb-2 text-xs font-semibold text-muted">Pregunta {d.qIndex + 1} de {QUIZ.length}</p>
         <h1 className="text-2xl font-bold leading-snug">{q.text}</h1>
-        <div className="mt-6 space-y-2.5">
+        <div className="stagger mt-6 space-y-2.5">
           {q.options.map((o) => (
             <Option key={o.id} on={selected.has(o.id)} onClick={() => { const quiz = { ...d.quiz, [q.id]: o.id }; setD({ ...d, quiz }); setTimeout(() => advance(quiz), 150) }}>
               <span className="flex-1">{o.text}</span>{selected.has(o.id) && <span className="text-primary">✓</span>}
@@ -556,10 +556,10 @@ export default function Onboarding() {
   return (
     <Shell section="habitos" frac={1} screen="group">
       <div className="pt-10 text-center">
-        <div className="text-5xl" aria-hidden>🏆</div>
+        <div className="bounce-in text-6xl" aria-hidden>🏆</div>
         <h1 className="mt-4 text-3xl font-black tracking-tight">¡Nivel 0!</h1>
         <p className="mt-3 text-muted">Último paso: competí con tus amigos. Creá un grupo o unite con el código que te pasaron.</p>
-        <div className="mt-8 space-y-3">
+        <div className="stagger mt-8 space-y-3">
           <button className="btn btn-primary w-full" onClick={async () => { await refreshProfile(); navigate('/grupos', { replace: true }) }}>Crear o unirme a un grupo</button>
           <button className="btn btn-ghost w-full" onClick={async () => { await refreshProfile(); navigate('/', { replace: true }) }}>Más tarde</button>
         </div>

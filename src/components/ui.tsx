@@ -25,7 +25,7 @@ export function PageHeader({ title, subtitle, right }: { title: string; subtitle
   return (
     <header className="mb-5 flex items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="text-2xl font-extrabold tracking-tight">{title}</h1>
+        <h1 className="text-3xl font-black tracking-tight">{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {right}
@@ -86,7 +86,7 @@ export function Bar({ value, max, className = 'bg-xp' }: { value: number; max: n
   const pct = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
   return (
     <div className="h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
-      <div className={`h-full rounded-full transition-all duration-500 ${className}`} style={{ width: `${pct}%` }} />
+      <div className={`h-full rounded-full transition-all duration-700 ease-out ${pct > 0 ? "shine" : ""} ${className}`} style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -145,5 +145,46 @@ export function Weight({ w }: { w: number }) {
       {[1, 2, 3].map((i) => <span key={i} className={`h-1.5 w-3 rounded-full ${i <= w ? 'bg-xp' : 'bg-line'}`} />)}
       <span className="ml-1">peso {w}</span>
     </span>
+  )
+}
+
+// ───── Animación ─────
+import { useEffect, useRef, useState } from 'react'
+
+/** Número que cuenta hasta el valor nuevo (respeta «Reducir movimiento»). */
+export function useCountUp(target: number, ms = 600) {
+  const [v, setV] = useState(target)
+  const from = useRef(target)
+  useEffect(() => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const start = from.current
+    if (reduce || start === target) { from.current = target; setV(target); return }
+    let raf = 0
+    const t0 = performance.now()
+    const tick = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms)
+      const e = 1 - Math.pow(1 - k, 3)
+      setV(start + (target - start) * e)
+      if (k < 1) raf = requestAnimationFrame(tick)
+      else from.current = target
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(raf); from.current = target }
+  }, [target, ms])
+  return v
+}
+
+/** Festejo breve: piezas que suben y desaparecen. */
+export function Burst({ items = ['🎉', '⭐', '🪙', '💪', '✨'], n = 18 }: { items?: string[]; n?: number }) {
+  const parts = Array.from({ length: n }, (_, i) => ({
+    left: `${5 + ((i * 53) % 90)}%`, dx: `${((i * 37) % 120) - 60}px`, rot: `${((i * 71) % 90) - 45}deg`,
+    delay: `${(i % 6) * 70}ms`, item: items[i % items.length],
+  }))
+  return (
+    <div className="burst" aria-hidden>
+      {parts.map((p, i) => (
+        <span key={i} style={{ left: p.left, animationDelay: p.delay, ['--dx' as string]: p.dx, ['--rot' as string]: p.rot }}>{p.item}</span>
+      ))}
+    </div>
   )
 }

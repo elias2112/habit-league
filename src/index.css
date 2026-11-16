@@ -39,18 +39,68 @@ input, select, textarea { font-size: 16px; }
 /* Foco visible con teclado. */
 :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 
-/* Transición entre pantallas del cuestionario. */
-@keyframes screen-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
-.screen-in { animation: screen-in 200ms ease-out both; }
+/* Fondo con un brillo suave arriba (no tapa el contenido). */
+body {
+  background-image:
+    radial-gradient(120% 60% at 50% -10%, color-mix(in oklab, var(--color-primary) 22%, transparent) 0%, transparent 60%),
+    radial-gradient(80% 40% at 100% 0%, color-mix(in oklab, var(--color-xp) 8%, transparent) 0%, transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
 
+/* ───────── Animaciones ───────── */
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes page-in { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes screen-in { from { opacity: 0; transform: translateX(40px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 70% { transform: scale(.92); } 100% { transform: scale(1); } }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 0%, transparent); }
+                  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-primary) 25%, transparent); } }
+@keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(200%); } }
+@keyframes float-up { 0% { opacity: 0; transform: translate(0, 0) scale(.6); } 15% { opacity: 1; }
+                      100% { opacity: 0; transform: translate(var(--dx, 0), -160px) rotate(var(--rot, 0deg)) scale(1.1); } }
+@keyframes bounce-in { 0% { transform: scale(.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+
+/* Entre pestañas y entre pantallas del cuestionario. */
+.page-in { animation: page-in 320ms cubic-bezier(.22, 1, .36, 1) both; }
+.screen-in { animation: screen-in 380ms cubic-bezier(.22, 1, .36, 1) both; }
+/* Listas que entran de a una. */
+.stagger > * { animation: rise-in 420ms cubic-bezier(.22, 1, .36, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 40ms; }
+.stagger > *:nth-child(2) { animation-delay: 90ms; }
+.stagger > *:nth-child(3) { animation-delay: 140ms; }
+.stagger > *:nth-child(4) { animation-delay: 190ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 290ms; }
+.stagger > *:nth-child(7) { animation-delay: 340ms; }
+.stagger > *:nth-child(n+8) { animation-delay: 390ms; }
+.pop { animation: pop 420ms cubic-bezier(.34, 1.56, .64, 1); }
+.glow { animation: glow 1.6s ease-in-out 2; }
+.bounce-in { animation: bounce-in 520ms cubic-bezier(.34, 1.56, .64, 1) both; }
+/* Brillo que recorre las barras de progreso. */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: ''; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .35), transparent);
+  animation: shimmer 2.4s ease-in-out infinite;
+}
+/* Festejo: piezas que suben y se desvanecen. */
+.burst { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: hidden; }
+.burst > span { position: absolute; bottom: 30%; font-size: 1.6rem; animation: float-up 1.4s ease-out both; }
+
+/* Con «Reducir movimiento»: solo fundidos, sin desplazamientos ni rebotes. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  .page-in, .screen-in, .stagger > *, .bounce-in { animation: fade-in 200ms ease-out both !important; }
+  .pop, .glow, .shine::after, .burst > span { animation: none !important; }
+  .burst { display: none; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
 }
 
 @utility card {
   border-radius: var(--radius-2xl);
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-line);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-surface-2) 70%, var(--color-surface)) 0%, var(--color-surface) 100%);
+  border: 1px solid color-mix(in oklab, var(--color-line) 80%, transparent);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .04) inset, 0 8px 24px -12px rgb(0 0 0 / .6);
   padding: --spacing(4);
 }
 @utility input {
@@ -78,8 +128,9 @@ input, select, textarea { font-size: 16px; }
   &:disabled { opacity: .45; pointer-events: none; }
 }
 @utility btn-primary {
-  background-color: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary) 0%, color-mix(in oklab, var(--color-primary) 70%, #5AA9FF) 100%);
   color: var(--color-bg);
+  box-shadow: 0 6px 18px -8px color-mix(in oklab, var(--color-primary) 80%, transparent);
   &:hover { filter: brightness(1.08); }
 }
 @utility btn-ghost {

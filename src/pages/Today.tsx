@@ -12,7 +12,7 @@ import { signed, type JudgmentToday } from '../lib/judgment'
 import EvidencePhoto from '../components/EvidencePhoto'
 import Judgment from '../components/Judgment'
 import StrengthPanel from '../components/StrengthPanel'
-import { Bar, Empty, ErrorBox, Flame, Loading, PageHeader, PillarIcon, Weight } from '../components/ui'
+import { Bar, Burst, Empty, ErrorBox, Flame, Loading, PageHeader, PillarIcon, Weight, useCountUp } from '../components/ui'
 
 const CheckIcon = () => (
   <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -52,6 +52,16 @@ export default function Today() {
   const [judgment, setJudgment] = useState<JudgmentToday | null>(null)
   const [judging, setJudging] = useState(false)
   const capNotice = useCapNotice(day?.strength_cap)
+  const shownTotal = useCountUp(day?.score.total ?? 0)
+  const shownCoins = useCountUp(day?.wallet.balance ?? 0)
+  const [party, setParty] = useState(false)
+  useEffect(() => {
+    if (!day || day.score.total < 100) return
+    const key = 'hl:festejo:' + day.day
+    let seen = false
+    try { seen = localStorage.getItem(key) === '1'; localStorage.setItem(key, '1') } catch { /* sin almacenamiento */ }
+    if (!seen) { setParty(true); const t = setTimeout(() => setParty(false), 1800); return () => clearTimeout(t) }
+  }, [day])
 
   useEffect(() => {
     supabase.rpc('user_streak', { p_user: me }).then(({ data }) => setStreak((data as number) ?? 0))
@@ -108,6 +118,7 @@ export default function Today() {
 
   return (
     <>
+      {party && <Burst />}
       <PageHeader title="Hoy" subtitle={<span className="capitalize">{formatLongDate(day.day)}</span>} right={<Flame n={streak} big />} />
 
       {day.notices.map((n) => (
@@ -143,11 +154,11 @@ export default function Today() {
         <div className="mt-4 flex items-end justify-between border-t border-line pt-3">
           <div>
             <span className="text-xs font-semibold text-muted">Puntos de hoy · {doneCount}/{day.habits.length}</span>
-            <div className="text-4xl font-black tabular-nums text-xp">{Math.round(s.total)}<span className="text-lg font-bold text-muted"> / 100</span></div>
+            <div className={`text-5xl font-black tabular-nums text-xp ${s.total >= 100 ? 'pop' : ''}`} key={s.total >= 100 ? 'full' : 'part'}>{Math.round(shownTotal)}<span className="text-lg font-bold text-muted"> / 100</span></div>
           </div>
           <Link to="/tienda" className="mb-1 text-right text-sm">
             <span className="block text-xs text-muted">Billetera</span>
-            <b className={day.wallet.balance < 0 ? 'text-danger' : 'text-primary'}>🪙 {fmtCoins(day.wallet.balance)} ›</b>
+            <b className={day.wallet.balance < 0 ? 'text-danger' : 'text-primary'}>🪙 {fmtCoins(Math.round(shownCoins * 100) / 100)} ›</b>
           </Link>
         </div>
         {(s.bonus > 0 || s.multiplier < 1 || s.overflow > 0) && (
@@ -191,7 +202,7 @@ export default function Today() {
               <section key={b.id} className="mb-5">
                 <h2 className="mb-2 font-bold">{b.title}</h2>
                 {b.id === 'fuerza' && <StrengthPanel s={day.strength} onChange={() => void reload()} />}
-                <ul className="space-y-2.5">
+                <ul className="stagger space-y-2.5">
                   {hs.map((h) => <HabitRow key={h.id} h={h} busy={busy.has(h.id)} onToggle={() => toggle(h)} onAdd={(d) => add(h, d)} onPhoto={(f) => photo(h, f)} />)}
                 </ul>
                 {b.id === 'fuerza' && <p className="mt-2 text-xs text-muted">Se puede hacer en varias series. No es consejo médico ni de entrenamiento.</p>}
@@ -205,7 +216,7 @@ export default function Today() {
               <p className="mb-3 text-xs text-muted">
                 "No lo hice" suma; "Lo hice" multiplica tus puntos por su gravedad (salvo que tengas un permiso); sin marcar no suma ni resta.
               </p>
-              <ul className="space-y-2">
+              <ul className="stagger space-y-2">
                 {day.vices.map((v) => <ViceRow key={v.id} v={v} busy={busy.has(v.id)} onSet={(st) => setVice(v, st)} />)}
               </ul>
             </section>
@@ -263,7 +274,7 @@ function HabitRow({ h, busy, onToggle, onAdd, onPhoto }: {
   const maxPct = Math.round(CONFIG.maxCompletion * 100)
 
   return (
-    <li className={`rounded-2xl border p-3.5 transition ${complete ? 'border-primary/70 bg-primary/10' : 'border-line bg-surface'}`}>
+    <li className={`rounded-2xl border p-3.5 transition-all duration-300 ${complete ? 'border-primary/70 bg-primary/10 shadow-[0_8px_24px_-14px_var(--color-primary)]' : 'border-line bg-surface'}`}>
       <div className="flex items-start gap-3">
         <PillarIcon pillar={h.pillar} />
         <div className="min-w-0 flex-1">
@@ -282,7 +293,8 @@ function HabitRow({ h, busy, onToggle, onAdd, onPhoto }: {
         </div>
         {!measurable && (
           <button onClick={onToggle} disabled={busy} aria-pressed={complete} aria-label={complete ? `Desmarcar ${h.name}` : `Marcar ${h.name}`}
-            className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 transition active:scale-95 ${complete ? 'border-primary bg-primary text-bg' : 'border-line text-transparent hover:text-muted'}`}>
+            key={complete ? 'on' : 'off'}
+            className={`grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 transition active:scale-90 ${complete ? 'pop border-primary bg-primary text-bg shadow-[0_0_18px_-2px_var(--color-primary)]' : 'border-line text-transparent hover:text-muted'}`}>
             <CheckIcon />
           </button>
         )}

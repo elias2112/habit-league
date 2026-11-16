@@ -99,7 +99,7 @@ export default function Store() {
           <section key={sec.id} className="mb-6">
             <h2 className="mb-1 font-bold">{sec.title}</h2>
             <p className="mb-2 text-xs text-muted">{sec.hint}</p>
-            <ul className="space-y-2">
+            <ul className="stagger space-y-2">
               {list.map((it) => {
                 const off = it.opt_in && !it.opted
                 return (

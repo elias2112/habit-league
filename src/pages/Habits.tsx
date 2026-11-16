@@ -108,7 +108,7 @@ function Plan() {
       )}
 
       <h2 className="mb-2 font-bold">Hábitos ({day.habits.length})</h2>
-      <ul className="space-y-2">
+      <ul className="stagger space-y-2">
         {day.habits.map((h) => (
           <li key={h.id} className="card">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">{BLOCK_LABEL[h.block]}</p>
