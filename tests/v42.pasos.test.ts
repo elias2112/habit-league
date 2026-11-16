@@ -379,17 +379,61 @@ describe('009: ejercicios elegidos, cambiar de grupo y videojuegos', () => {
     await expect(h.as(C, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{}}'::jsonb)`, [BASE])).rejects.toThrow(/al menos un ejercicio/)
   })
 
-  it('cambiar de grupo: sin confirmar no deja; creando o uniéndose sale del actual, y el grupo pasa al más antiguo', async () => {
+  it('varios grupos (011): crear o unirse no saca de los otros; salir de uno pasa el grupo al más antiguo', async () => {
     const g1 = await group(A, B)
-    await expect(h.as(A, `select * from create_group('Otro', 30)`)).rejects.toThrow(/salís del actual/)
-    const [g2] = await h.as<{ id: string; invite_code: string }>(A, `select * from create_group('Otro', 30, true)`)
-    expect(await h.admin(`select group_id from group_members where user_id = $1`, [A])).toEqual([{ group_id: g2.id }])
-    expect(await h.admin(`select created_by from groups where id = $1`, [g1])).toEqual([{ created_by: B }])  // A creó g1: pasa a B
-    await expect(h.as(B, `select join_group($1)`, [g2.invite_code])).rejects.toThrow(/salís del actual/)
-    await h.as(B, `select join_group($1, true)`, [g2.invite_code])
-    expect(await h.admin(`select count(*)::int c from groups where id = $1`, [g1])).toEqual([{ c: 0 }])     // g1 quedó vacío: se borra
-    await h.as(B, `select leave_group()`)
-    expect(await h.admin(`select count(*)::int c from group_members where user_id = $1`, [B])).toEqual([{ c: 0 }])
+    const [g2] = await h.as<{ id: string; invite_code: string }>(A, `select * from create_group('Otro', 30)`)
+    expect((await h.admin<{ group_id: string }>(`select group_id from group_members where user_id = $1 order by joined_at`, [A])).map((x) => x.group_id)).toEqual([g1, g2.id])
+    await h.as(B, `select join_group($1)`, [g2.invite_code])
+    await h.as(A, `select leave_group($1)`, [g1])
+    expect(await h.admin(`select created_by from groups where id = $1`, [g1])).toEqual([{ created_by: B }])
+    await h.as(B, `select leave_group($1)`, [g1])
+    expect(await h.admin(`select count(*)::int c from groups where id = $1`, [g1])).toEqual([{ c: 0 }])     // quedó vacío: se borra
+    expect(await h.admin(`select count(*)::int c from group_members where group_id = $1`, [g2.id])).toEqual([{ c: 2 }])
+  })
+
+  it('un cambio de mi plan que cuenta para el ranking lo votan todos mis grupos; uno que rechaza, rechaza en todos', async () => {
+    const g1 = await group(A, B)
+    const [g2] = await h.as<{ id: string; invite_code: string }>(A, `select * from create_group('Otro', 30)`)
+    await h.as(C, `select join_group($1)`, [g2.invite_code])
+    await h.as(A, `select create_initial_plan($1::jsonb)`, [BASE])
+    const [hb] = await h.admin<{ id: string }>(`select id from habits where user_id = $1 and catalog_id = 'caminar_30'`, [A])
+    const weight = () => h.admin<{ weight: number }>(`select weight from plan_habits where plan_id = plan_for($1, user_today($1) + 1) and habit_id = $2`, [A, hb.id])
+    await h.as(A, `select propose_change('me', 'habit.weight', jsonb_build_object('habit_id', $1::text, 'weight', 3), $2)`, [hb.id, g1])
+    const reqs = await h.admin<{ id: string; group_id: string; batch_id: string }>(`select id, group_id, batch_id from change_requests order by created_at`)
+    expect(reqs).toHaveLength(2)
+    expect(new Set(reqs.map((r) => r.batch_id)).size).toBe(1)
+    const inG = (g: string) => reqs.find((r) => r.group_id === g)!.id
+    await h.as(B, `select vote_change($1, 'yes')`, [inG(g1)])
+    expect(await weight()).toEqual([{ weight: 1 }])                                    // falta el otro grupo: sigue igual
+    await h.as(C, `select vote_change($1, 'yes')`, [inG(g2.id)])
+    expect(await weight()).toEqual([{ weight: 3 }])                                    // aprobado en los dos: rige mañana
+
+    await h.as(A, `select propose_change('me', 'habit.weight', jsonb_build_object('habit_id', $1::text, 'weight', 1), $2)`, [hb.id, g1])
+    const two = await h.admin<{ id: string; group_id: string }>(`select id, group_id from change_requests where status = 'pending'`)
+    await h.as(C, `select vote_change($1, 'no')`, [two.find((r) => r.group_id === g2.id)!.id])
+    expect(await h.admin(`select status from change_requests where id = $1`, [two.find((r) => r.group_id === g1)!.id])).toEqual([{ status: 'rejected' }])
+    expect(await weight()).toEqual([{ weight: 3 }])
+  })
+
+  it('cada grupo rankea con sus reglas; monedas y experiencia son personales', async () => {
+    const g1 = await group(A, B)
+    const [g2] = await h.as<{ id: string; invite_code: string }>(A, `select * from create_group('Otro', 30)`)
+    const [p] = await h.admin<{ id: string }>(`insert into plans (user_id, effective_from) values ($1, user_today($1) - 1) returning id`, [A])
+    const [hb] = await h.admin<{ id: string }>(`insert into habits (user_id, name, pillar) values ($1, 'h', 'mente') returning id`, [A])
+    await h.admin(`insert into plan_habits (plan_id, habit_id, weight) values ($1, $2, 1)`, [p.id, hb.id])
+    const [v] = await h.admin<{ id: string }>(`insert into vices (user_id, name) values ($1, 'x') returning id`, [A])
+    await h.admin(`insert into plan_vices (plan_id, vice_id, weight, severity) values ($1, $2, 1, 'grave')`, [p.id, v.id])
+    await log(hb.id, A, 0)
+    await h.admin(`insert into vice_days (user_id, vice_id, day, state) values ($1, $2, user_today($1), 'slipped')`, [A, v.id])
+    // El grupo 2 votó que una recaída grave multiplique ×0,5 (rige desde ayer, para la prueba).
+    await h.admin(`insert into group_config (group_id, key, value, effective_from) values ($1, 'severity', '{"leve":0.95,"normal":0.9,"grave":0.5}', current_date - 2)`, [g2.id])
+    await h.admin(`insert into group_config (group_id, key, value, effective_from) values ($1, 'multiplierFloor', '0.4', current_date - 2)`, [g2.id])
+    await h.admin(`update groups set start_date = user_today($1) - 1`, [A])
+    await h.admin(`update group_members set joined_at = now() - interval '2 days'`)
+    const total = async (g: string) => n((await h.as<{ user_id: string; total_points: string }>(A, `select * from group_leaderboard($1)`, [g])).find((r) => r.user_id === A)!.total_points)
+    expect(await total(g1)).toBe(80)                                                   // ayer 0 + hoy 100 × 0,8 (config)
+    expect(await total(g2.id)).toBe(50)                                                // hoy 100 × 0,5 (reglas del grupo 2)
+    expect(n((await h.admin<{ s: { total: number } }>(`select day_score($1, user_today($1)) s`, [A]))[0].s.total)).toBe(80)  // personal: config
   })
 
   it('videojuegos: vicio y hábitos en el catálogo; la pregunta del Juicio va según la respuesta por área', async () => {

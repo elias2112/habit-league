@@ -19,6 +19,8 @@ Objetivo: correr todas las migraciones (hasta la **007**) y probar la v4.2 — f
 9. `supabase/migrations/007_v42.sql`
 10. `supabase/migrations/008_quitar_liga.sql`
 11. `supabase/migrations/009_ajustes.sql`
+12. `supabase/migrations/010_notificaciones.sql`
+13. `supabase/migrations/011_varios_grupos.sql`
 
 Si algún paso da error, copiá el mensaje completo y mandámelo.
 

@@ -169,7 +169,7 @@ export default function Groups() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [members, setMembers] = useState<number | null>(null)
-  const [switching, setSwitching] = useState(false)
+  const [adding, setAdding] = useState(false)
 
   useEffect(() => {
     if (!selected) return
@@ -179,9 +179,8 @@ export default function Groups() {
 
   async function create(e: FormEvent) {
     e.preventDefault()
-    if (selected && !confirm(`Vas a salir de «${selected.name}» y crear «${name.trim()}». Tu plan, tus monedas y tu nivel siguen igual. ¿Seguimos?`)) return
     setBusy(true); setError(null)
-    const { data, error } = await supabase.rpc('create_group', { p_name: name, p_duration: duration, p_leave: Boolean(selected) })
+    const { data, error } = await supabase.rpc('create_group', { p_name: name, p_duration: duration })
     setBusy(false)
     if (error) return setError(errorMessage(error))
     setName('')
@@ -191,9 +190,8 @@ export default function Groups() {
 
   async function join(e: FormEvent) {
     e.preventDefault()
-    if (selected && !confirm(`Vas a salir de «${selected.name}» para entrar al grupo del código. Tu plan, tus monedas y tu nivel siguen igual. ¿Seguimos?`)) return
     setBusy(true); setError(null)
-    const { data, error } = await supabase.rpc('join_group', { p_code: code, p_leave: Boolean(selected) })
+    const { data, error } = await supabase.rpc('join_group', { p_code: code })
     setBusy(false)
     if (error) return setError(errorMessage(error))
     setCode('')
@@ -203,7 +201,7 @@ export default function Groups() {
 
   async function leave() {
     if (!selected || !confirm(`¿Salir de "${selected.name}"? Vas a dejar de ver su ranking. Tu plan, tus monedas y tu nivel siguen igual.`)) return
-    const { error } = await supabase.rpc('leave_group')
+    const { error } = await supabase.rpc('leave_group', { p_group: selected.id })
     if (error) return setError(errorMessage(error))
     await reload()
   }
@@ -272,15 +270,15 @@ export default function Groups() {
           <FriendsPlans groupId={selected.id} me={me} />
 
           <section className="border-t border-line py-5">
-            <button className="flex w-full items-center justify-between font-bold" onClick={() => setSwitching(!switching)} aria-expanded={switching}>
-              <span>🔀 Cambiar de grupo</span><span className="text-sm text-muted">{switching ? 'Cerrar' : 'Abrir'}</span>
+            <button className="flex w-full items-center justify-between font-bold" onClick={() => setAdding(!adding)} aria-expanded={adding}>
+              <span>➕ Otro grupo</span><span className="text-sm text-muted">{adding ? 'Cerrar' : 'Abrir'}</span>
             </button>
-            {switching && (
+            {adding && (
               <div className="mt-3 space-y-5">
-                <p className="text-xs text-muted">Cada persona juega en un grupo. Si entrás a otro o creás uno nuevo, salís de «{selected.name}». Tu plan, tus monedas y tu nivel siguen igual; el ranking del grupo nuevo cuenta desde que entrás.</p>
+                <p className="text-xs text-muted">Podés estar en varios grupos a la vez. Tu plan, tus monedas y tu nivel son uno solo; cada grupo tiene su ranking (desde que entrás), su tienda y sus reglas. Los cambios de tu plan que cuentan para el ranking los votan todos tus grupos.</p>
                 <div><p className="mb-2 text-sm font-semibold">Unirme con un código</p>{joinForm}</div>
                 <div><p className="mb-2 text-sm font-semibold">Crear un grupo nuevo</p>{createForm}</div>
-                <button className={`${small} btn-ghost text-danger`} onClick={leave}>Solo salir de «{selected.name}»</button>
+                <button className={`${small} btn-ghost text-danger`} onClick={leave}>Salir de «{selected.name}»</button>
               </div>
             )}
           </section>

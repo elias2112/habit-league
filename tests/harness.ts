@@ -15,6 +15,7 @@ export const MIGRATIONS = [
   '../supabase/migrations/008_quitar_liga.sql',
   '../supabase/migrations/009_ajustes.sql',
   '../supabase/migrations/010_notificaciones.sql',
+  '../supabase/migrations/011_varios_grupos.sql',
 ]
 export const readMigration = (p: string) => readFileSync(new URL(p, import.meta.url), 'utf8')
 

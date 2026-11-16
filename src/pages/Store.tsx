@@ -7,6 +7,7 @@ import { useGroups } from '../lib/groups'
 import { CONFIG } from '../game/config'
 import { BUY_REASON } from '../game/store'
 import { ErrorBox, Loading, PageHeader } from '../components/ui'
+import GroupPicker from '../components/GroupPicker'
 
 /** Artículo de MI tienda (RPC my_store): precio según mis respuestas privadas por área; los ocultos no vienen. */
 interface Item {
@@ -24,7 +25,7 @@ const sectionOf = (it: Item) => (it.group_only ? 'voucher' : it.kind)
 
 export default function Store() {
   const { day, reload } = useMyDay()
-  const { selected: group } = useGroups()
+  const { groups, selected: group, select } = useGroups()
   const [items, setItems] = useState<Item[]>([])
   const [buying, setBuying] = useState<Item | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -32,10 +33,10 @@ export default function Store() {
   const [editing, setEditing] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.rpc('my_store')
+    const { data, error } = await supabase.rpc('my_store', { p_group: group?.id ?? null })
     if (error) return setError(errorMessage(error))
     setItems(((data ?? []) as Item[]).map((x) => ({ ...x, price: x.price == null ? null : Number(x.price), bought_this_week: Number(x.bought_this_week) })))
-  }, [])
+  }, [group])
   useEffect(() => { if (group) void load() }, [load, group])
 
   async function toggleOptin(it: Item) {
@@ -67,6 +68,7 @@ export default function Store() {
   return (
     <>
       <PageHeader title="Tienda" subtitle="Jodita coin: 1 moneda = 1 €. Gastar nunca baja tu ranking." />
+      {groups.length > 1 && <><GroupPicker groups={groups} selected={group} onSelect={select} /><p className="-mt-2 mb-3 text-xs text-muted">Cada grupo tiene su tienda; la billetera es una sola.</p></>}
 
       <section className="card mb-4">
         <p className="text-sm text-muted">Billetera</p>

@@ -19,6 +19,8 @@ end $$;
 do $$
 declare n int; who text;
 begin
+  -- Desde la 011 se puede estar en varios grupos: si la 007 ya corrió, no se exige ni se crea el índice.
+  if to_regclass('respaldo_v4.reinicio') is not null then return; end if;
   select count(*), string_agg(p.username, ', ') into n, who
   from (select user_id from public.group_members group by user_id having count(*) > 1) x
   join public.profiles p on p.id = x.user_id;
@@ -26,7 +28,11 @@ begin
     raise exception 'Migración 006 detenida: % persona(s) están en más de un grupo (%). Dejá a cada una en un solo grupo y volvé a ejecutar.', n, who;
   end if;
 end $$;
-create unique index if not exists group_members_one_group on public.group_members (user_id);
+do $$ begin
+  if to_regclass('respaldo_v4.reinicio') is null then
+    create unique index if not exists group_members_one_group on public.group_members (user_id);
+  end if;
+end $$;
 
 -- ───────────── 1. Configuración ─────────────
 -- BEGIN CONFIG3 (generado por scripts/gen-catalog-sql.mjs; no editar a mano)

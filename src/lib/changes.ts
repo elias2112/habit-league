@@ -15,8 +15,10 @@ export interface ChangeRequest {
   created_at: string; closes_at: string; decided_at: string | null
 }
 
-export const propose = (scope: Scope, kind: ChangeKind, payload: Record<string, unknown>) =>
-  supabase.rpc('propose_change', { p_scope: scope, p_kind: kind, p_payload: payload })
+/** group: grupo donde se propone (cambios de grupo, tienda y config). Los de mi plan que cuentan para el ranking
+ *  los votan todos mis grupos (011). */
+export const propose = (scope: Scope, kind: ChangeKind, payload: Record<string, unknown>, group?: string | null) =>
+  supabase.rpc('propose_change', { p_scope: scope, p_kind: kind, p_payload: payload, p_group: group ?? null })
 
 /** Descripción legible de un cambio. */
 export function describeChange(r: Pick<ChangeRequest, 'kind' | 'payload' | 'private' | 'scope'>): string {

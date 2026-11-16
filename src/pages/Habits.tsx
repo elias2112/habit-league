@@ -12,6 +12,7 @@ import { personalHabitNotice } from '../game/ranking'
 import { VICES } from '../lib/vices'
 import CatalogPicker from '../components/CatalogPicker'
 import Goals from '../components/Goals'
+import GroupPicker from '../components/GroupPicker'
 import { ErrorBox, Loading, PageHeader, PillarIcon, PillarSelect, PillarTag, Weight, WeightPicker } from '../components/ui'
 
 export default function Habits() {
@@ -43,6 +44,7 @@ function ScopePicker({ value, onChange, allowGroup = true, adding = false }: { v
         <button type="button" className={`btn text-sm ${value === 'me' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('me')}>Solo yo</button>
         <button type="button" disabled={!allowGroup} className={`btn text-sm ${value === 'group' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => onChange('group')}>Todo el grupo</button>
       </div>
+      {value === 'me' && !adding && <p className="mt-1 text-xs text-muted">Si estás en varios grupos, lo votan todos: se aprueba si se aprueba en cada uno.</p>}
       {value === 'group' && <p className="mt-1 text-xs text-muted">{adding ? `Se vota. Si se aprueba, se agrega al plan de cada miembro (peso inicial ${CONFIG.groupScopeDefaultWeight} para los demás; cada uno lo cambia después) y cuenta para el ranking.` : 'Se vota y, si se aprueba, cambia para cada miembro.'}</p>}
       {value === 'me' && adding && <p className="mt-1 rounded-lg bg-xp/10 px-2 py-1.5 text-xs text-xp">{personalHabitNotice(GROUP_NAME)} Se agrega sin votación.</p>}
     </div>
@@ -56,7 +58,7 @@ function Plan() {
   const { session } = useAuth()
   const me = session!.user.id
   const { day, reload } = useMyDay()
-  const { selected: group, loading: gLoading } = useGroups()
+  const { groups, selected: group, select, loading: gLoading } = useGroups()
   const [panel, setPanel] = useState<Panel>(null)
   const [mine, setMine] = useState<ChangeRequest[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +73,7 @@ function Plan() {
 
   const send: Send = async (scope, kind, payload) => {
     setError(null); setOk(null)
-    const { data, error } = await propose(scope, kind, payload)
+    const { data, error } = await propose(scope, kind, payload, group?.id)
     if (error) { setError(errorMessage(error)); return false }
     const { data: st } = await supabase.from('change_requests').select('status').eq('id', data as string).maybeSingle()
     setOk(st?.status === 'approved' ? 'Listo: rige desde mañana.' : 'Propuesta enviada. Si se aprueba, rige desde mañana.')
@@ -90,6 +92,7 @@ function Plan() {
 
   return (
     <>
+      {groups.length > 1 && <><GroupPicker groups={groups} selected={group} onSelect={select} /><p className="-mt-2 mb-3 text-xs text-muted">Lo «para todo el grupo» se propone en el grupo elegido. Lo de tu plan lo votan todos tus grupos.</p></>}
       <ErrorBox>{error}</ErrorBox>
       {ok && <p className="mb-3 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2 text-sm">{ok}</p>}
 

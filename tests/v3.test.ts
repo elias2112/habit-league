@@ -228,11 +228,12 @@ describe('plan inicial y cambios que rigen desde mañana', () => {
     expect(Number((await h.as<{ progress: string }>(A, `select progress from goal_list($1)`, [A]))[0].progress)).toBe(20)
   })
 
-  it('un grupo por persona', async () => {
+  it('varios grupos por persona (011)', async () => {
     await group(A)
     const [g2] = await h.as<{ invite_code: string }>(B, `select * from create_group('Otro', 30)`)
-    await expect(h.as(A, `select join_group($1)`, [g2.invite_code])).rejects.toThrow(/otro grupo/)
-    await expect(h.as(A, `select create_group('Tercero', 30)`)).rejects.toThrow(/Ya estás en un grupo/)
+    await h.as(A, `select join_group($1)`, [g2.invite_code])
+    await h.as(A, `select create_group('Tercero', 30)`)
+    expect(await h.admin(`select count(*)::int c from group_members where user_id = $1`, [A])).toEqual([{ c: 3 }])
   })
 })
 
@@ -325,10 +326,11 @@ describe('ranking y configuración', () => {
     const [{ id }] = await h.as<{ id: string }>(A, `select propose_change('group', 'config.set', '{"key":"coinThresholdLow","value":60}'::jsonb) id`)
     await h.as(B, `select vote_change($1, 'yes')`, [id])
     const r = await h.admin<{ hoy: string; man: string }>(
-      `select cfg_num($1, 'coinThresholdLow', user_today($1))::text hoy, cfg_num($1, 'coinThresholdLow', user_today($1) + 1)::text man`, [A])
+      `select (cfg_group($2, 'coinThresholdLow', user_today($1)) #>> '{}') hoy, (cfg_group($2, 'coinThresholdLow', user_today($1) + 1) #>> '{}') man`, [A, g])
     expect(r[0]).toEqual({ hoy: '75', man: '60' })
     await expect(h.as(A, `select propose_change('me', 'config.set', '{"key":"x","value":1}'::jsonb)`)).rejects.toThrow(/siempre para todo el grupo/)
-    void g
+    // Las reglas del grupo no cambian lo personal (monedas y experiencia usan config).
+    expect(await h.admin(`select cfg_num($1, 'coinThresholdLow', user_today($1) + 1)::text v`, [A])).toEqual([{ v: '75' }])
   })
 
   it('pesos de los amigos: el grupo ve pesos; privados y vicios sin nombre', async () => {
