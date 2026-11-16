@@ -325,6 +325,46 @@ describe('paso 4: tienda', () => {
   })
 })
 
+// ───────────────────────────── 010: notificaciones ─────────────────────────────
+describe('010: recordatorios', () => {
+  const nowHour = async (u: string) => (await h.admin<{ h: number }>(
+    `select extract(hour from now() at time zone p.timezone)::int h from profiles p where id = $1`, [u]))[0].h
+  async function subscribe(u: string, endpoint: string) {
+    await h.as(u, `select save_push_subscription($1, 'clave', 'auth')`, [endpoint])
+  }
+
+  it('agua a la hora elegida, una sola vez; fuerza base solo si falta; nadie más ve las suscripciones', async () => {
+    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{"flexiones":10}}'::jsonb)`, [BASE])
+    await subscribe(A, 'https://push.example/a')
+    const hr = await nowHour(A)
+    await h.as(A, `select set_push_prefs(true, $1::int[], true, $2)`, [[hr], hr])
+    const first = await h.admin<{ kind: string; title: string; endpoint: string }>(`select kind, title, endpoint from push_due() order by kind`)
+    expect(first.map((x) => x.kind)).toEqual(['agua', 'fuerza'])
+    expect(first[0].endpoint).toBe('https://push.example/a')
+    expect(await h.admin(`select * from push_due()`)).toEqual([])                       // no se repite
+
+    // Con la fuerza base completa, no avisa.
+    await h.admin(`delete from push_log`)
+    const [fx] = await h.admin<{ id: string }>(`select id from habits where user_id = $1 and block = 'fuerza'`, [A])
+    await log(fx.id, A, 0, 10)
+    expect((await h.admin<{ kind: string }>(`select kind from push_due()`)).map((x) => x.kind)).toEqual(['agua'])
+
+    expect(await h.as(B, `select * from push_subscriptions`)).toEqual([])
+    await expect(h.as(A, `select * from push_due()`)).rejects.toThrow(/permission denied/)
+    await expect(h.as(A, `select set_push_prefs(true, '{25}', true, 19)`)).rejects.toThrow(/Hora inválida/)
+  })
+
+  it('fuera de hora no avisa; sin suscripción tampoco', async () => {
+    await subscribe(A, 'https://push.example/a2')
+    const hr = await nowHour(A)
+    await h.as(A, `select set_push_prefs(true, $1::int[], false, 19)`, [[(hr + 5) % 24]])
+    expect(await h.admin(`select * from push_due()`)).toEqual([])
+    await h.as(A, `select delete_push_subscription('https://push.example/a2')`)
+    await h.as(A, `select set_push_prefs(true, $1::int[], false, 19)`, [[hr]])
+    expect(await h.admin(`select * from push_due()`)).toEqual([])
+  })
+})
+
 // ───────────────────────────── 009: ajustes del dueño ─────────────────────────────
 describe('009: ejercicios elegidos, cambiar de grupo y videojuegos', () => {
   const ex = (u: string) => h.admin<{ strength_id: string; name: string; target: string }>(

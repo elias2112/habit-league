@@ -31,7 +31,7 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 - Vite + React + TypeScript, Tailwind CSS v4 (tokens de `docs/DESIGN.md` en `src/index.css`)
 - PWA con `vite-plugin-pwa`
 - Supabase (Auth, Postgres, Realtime, Storage) vía `@supabase/supabase-js`
-- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002` a `006` (con `005b` antes de la 006) `007a`, `007`, `008` y `009`. Todas se pueden re-ejecutar, **en orden**: las posteriores redefinen funciones de las anteriores. La clave en el cliente es la *publishable key*.
+- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002` a `006` (con `005b` antes de la 006) `007a`, `007`, `008`, `009` y `010` (notificaciones). Todas se pueden re-ejecutar, **en orden**: las posteriores redefinen funciones de las anteriores. La clave en el cliente es la *publishable key*.
 - Hosting: GitHub Pages vía Actions (`.github/workflows/deploy.yml`). La app vive bajo `/<repo>/`: usar `import.meta.env.BASE_URL` / `appUrl()`, nunca rutas absolutas `/...`.
 
 ## Reglas de trabajo
@@ -51,7 +51,7 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 ## Pendientes conocidos
 - RLS, triggers y storage probados en PGlite con stubs; falta una prueba manual sobre Supabase real con dos cuentas.
 - Apple Health vía Atajos de iOS: propuesto, sin hacer.
-- Notificaciones push: sin hacer.
+- Notificaciones (agua y fuerza base): `010_notificaciones.sql` + `.github/workflows/recordatorios.yml` (cada hora, con la `service_role` y la clave VAPID privada como secrets de GitHub; nunca en la app). El cron de GitHub puede atrasarse y se apaga tras 60 días sin actividad en el repo.
 - Admin: Elías resetea contraseñas desde el SQL Editor (README → Administración); nadie puede ver contraseñas.
 - Fotos: 1 GB gratis de Storage y 5 GB/mes de transferencia; no hay borrado automático de fotos viejas.
 - La columna `habits.xp_value` (y `habit_logs.xp`) quedaron deprecadas; eliminarlas cuando se confirme que no se usan.

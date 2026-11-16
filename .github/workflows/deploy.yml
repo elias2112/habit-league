@@ -33,6 +33,7 @@ jobs:
           BASE_PATH: /${{ github.event.repository.name }}/
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
       # GitHub Pages no reescribe rutas: 404.html = index.html para que /ranking, /perfil… funcionen al recargar.
       - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5

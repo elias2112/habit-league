@@ -13,7 +13,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png', 'push-sw.js'],
       manifest: {
         name: 'Habit League',
         short_name: 'Habit League',
@@ -33,6 +33,8 @@ export default defineConfig({
       workbox: {
         // Solo se cachea la app; Supabase va siempre por red (nada de datos viejos del ranking).
         runtimeCaching: [],
+        // Notificaciones (push y clic): public/push-sw.js.
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

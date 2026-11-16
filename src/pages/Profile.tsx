@@ -8,6 +8,7 @@ import { archetypeById } from '../lib/quiz'
 import ArchetypeCard from '../components/ArchetypeCard'
 import { MyRadar } from '../components/MyRadar'
 import JudgmentSettings from '../components/JudgmentSettings'
+import Reminders from '../components/Reminders'
 import AccountDanger from '../components/AccountDanger'
 import { ErrorBox, PageHeader, Spinner } from '../components/ui'
 
@@ -87,6 +88,8 @@ export default function Profile() {
         </div>
       )}
       <Link to="/quiz" className="btn btn-ghost mt-3 w-full">{arch ? 'Repetir el quiz' : 'Hacer el quiz'}</Link>
+
+      <Reminders />
 
       <JudgmentSettings />
 

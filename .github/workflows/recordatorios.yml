@@ -1,0 +1,36 @@
+# Recordatorios (agua y fuerza base) por notificación. Corre una vez por hora; la base decide a quién avisar.
+# Requiere estos secrets del repo (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (Project Settings → API; NUNCA en la app),
+#   VITE_VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY (están en .env.push.local, que no se sube).
+# Ojo: GitHub puede atrasar los cron (por eso cada aviso tiene 2 horas de margen) y los apaga si el repo pasa
+# 60 días sin actividad (se reactivan en la pestaña Actions).
+name: Recordatorios
+
+on:
+  schedule:
+    - cron: '5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recordatorios
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/send-reminders.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ secrets.VITE_VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
