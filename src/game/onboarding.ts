@@ -8,7 +8,7 @@ export interface OnboardingState {
   goals: string[]
   personalized: string[]
   /** metas elegidas por ejercicio (y si es variante fácil) o rechazo */
-  strength?: { targets: Record<string, number>; easy?: boolean } | 'declined'
+  strength?: { targets: Record<string, number>; easy?: boolean; exercises?: string[] } | 'declined'
 }
 export type Step =
   | { step: 'clear-goal' } | { step: 'pick-goals' } | { step: 'area' } | { step: 'friction' } | { step: 'suggest' }

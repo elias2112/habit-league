@@ -51,6 +51,13 @@
       "area": "foco",
       "slip": "Hoy aposté",
       "slip_penalty": 15
+    },
+    {
+      "id": "videojuegos",
+      "name": "Videojuegos de más",
+      "area": "foco",
+      "slip": "Hoy jugué de más",
+      "slip_penalty": 5
     }
   ]
 }

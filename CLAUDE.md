@@ -24,14 +24,14 @@ Los nombres y textos de arquetipos, quiz y hábitos están redactados sin géner
 
 ## Contenido como datos
 `content/quiz.json`, `content/archetypes.json`, `content/habits.json`, `content/goals.json`, `content/judgment.json` (Juicio y liga, ver `docs/JUEGO.md`) y `content/vices.json` (vicios y tropiezos) son la fuente de verdad. La app los importa (`src/lib/quiz.ts`, `src/lib/goals.ts`); no hardcodear preguntas ni hábitos en componentes. `content/test_vectors.json` trae entradas con la salida esperada; `tests/quiz.test.ts` verifica que el algoritmo las cumpla.
-- Al editar `content/habits.json`, `content/judgment.json`, `content/vices.json`, `content/config.json` o `content/store.json`: correr `npm run catalog` (regenera los bloques de datos de las migraciones 003 a 007; la configuración y la tienda van en la 007) y volver a ejecutar en Supabase esa migración **y todas las siguientes** (las posteriores redefinen funciones de las anteriores).
+- Al editar `content/habits.json`, `content/judgment.json`, `content/vices.json`, `content/config.json` o `content/store.json`: correr `npm run catalog` (regenera los bloques de datos de las migraciones 003 a 009; la configuración y la tienda van en la 007; el catálogo de hábitos, los vicios y las preguntas del Juicio también van completos en la 009, así que para un cambio de contenido alcanza con volver a correr la 009) y volver a ejecutar en Supabase esa migración **y todas las siguientes** (las posteriores redefinen funciones de las anteriores).
 - Hábitos nuevos del catálogo van con `auto: false` salvo que se quiera que entren al paquete automático (cambia la salida de los vectores).
 
 ## Stack
 - Vite + React + TypeScript, Tailwind CSS v4 (tokens de `docs/DESIGN.md` en `src/index.css`)
 - PWA con `vite-plugin-pwa`
 - Supabase (Auth, Postgres, Realtime, Storage) vía `@supabase/supabase-js`
-- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002` a `006` (con `005b` antes de la 006) `007a`, `007` y `008`. Todas se pueden re-ejecutar, **en orden**: las posteriores redefinen funciones de las anteriores. La clave en el cliente es la *publishable key*.
+- Base de datos, en este orden: `supabase/schema.sql`, `supabase/migrations/002` a `006` (con `005b` antes de la 006) `007a`, `007`, `008` y `009`. Todas se pueden re-ejecutar, **en orden**: las posteriores redefinen funciones de las anteriores. La clave en el cliente es la *publishable key*.
 - Hosting: GitHub Pages vía Actions (`.github/workflows/deploy.yml`). La app vive bajo `/<repo>/`: usar `import.meta.env.BASE_URL` / `appUrl()`, nunca rutas absolutas `/...`.
 
 ## Reglas de trabajo

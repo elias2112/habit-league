@@ -90,7 +90,7 @@ function Reviews({ groupId, me }: { groupId: string; me: string }) {
   if (!rows) return null
   const pending = rows.filter((r) => r.status === 'pending')
   return (
-    <section className="card mb-4">
+    <section className="border-t border-line py-5">
       <h2 className="mb-1 font-bold">
         🗳️ Votaciones {pending.length > 0 && <span className="ml-1 rounded-full bg-xp px-2 py-0.5 text-xs font-bold text-bg">{pending.length}</span>}
       </h2>
@@ -104,7 +104,7 @@ function Reviews({ groupId, me }: { groupId: string; me: string }) {
           const mine = r.proposer_id === me
           const closes = Math.max(0, Math.round((Date.parse(r.closes_at) - Date.now()) / 3600000))
           return (
-            <li key={r.id} className="rounded-2xl border border-line bg-surface-2/50 p-3">
+            <li key={r.id} className="rounded-xl bg-surface p-3">
               <p className="font-semibold">{describeChange(r)}</p>
               <p className="mt-1 text-xs text-muted">
                 de <b className="text-ink">{mine ? 'vos' : r.proposer}</b> · 👍 {r.yes} · 👎 {r.no} de {r.voters} · cierra en {closes} h
@@ -131,7 +131,7 @@ function FriendsPlans({ groupId, me }: { groupId: string; me: string }) {
   }, [groupId])
   if (rows.length === 0) return null
   return (
-    <details className="card mb-4">
+    <details className="border-t border-line py-5">
       <summary className="cursor-pointer font-bold">⚖️ Pesos de cada uno</summary>
       <p className="mt-1 text-xs text-muted">Los «solo yo» no cuentan para el ranking.</p>
       <div className="mt-3 space-y-4">
@@ -169,6 +169,7 @@ export default function Groups() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [members, setMembers] = useState<number | null>(null)
+  const [switching, setSwitching] = useState(false)
 
   useEffect(() => {
     if (!selected) return
@@ -178,8 +179,9 @@ export default function Groups() {
 
   async function create(e: FormEvent) {
     e.preventDefault()
+    if (selected && !confirm(`Vas a salir de «${selected.name}» y crear «${name.trim()}». Tu plan, tus monedas y tu nivel siguen igual. ¿Seguimos?`)) return
     setBusy(true); setError(null)
-    const { data, error } = await supabase.rpc('create_group', { p_name: name, p_duration: duration })
+    const { data, error } = await supabase.rpc('create_group', { p_name: name, p_duration: duration, p_leave: Boolean(selected) })
     setBusy(false)
     if (error) return setError(errorMessage(error))
     setName('')
@@ -189,8 +191,9 @@ export default function Groups() {
 
   async function join(e: FormEvent) {
     e.preventDefault()
+    if (selected && !confirm(`Vas a salir de «${selected.name}» para entrar al grupo del código. Tu plan, tus monedas y tu nivel siguen igual. ¿Seguimos?`)) return
     setBusy(true); setError(null)
-    const { data, error } = await supabase.rpc('join_group', { p_code: code })
+    const { data, error } = await supabase.rpc('join_group', { p_code: code, p_leave: Boolean(selected) })
     setBusy(false)
     if (error) return setError(errorMessage(error))
     setCode('')
@@ -199,8 +202,8 @@ export default function Groups() {
   }
 
   async function leave() {
-    if (!selected || !confirm(`¿Salir de "${selected.name}"? Vas a dejar de ver su ranking.`)) return
-    const { error } = await supabase.from('group_members').delete().eq('group_id', selected.id).eq('user_id', me)
+    if (!selected || !confirm(`¿Salir de "${selected.name}"? Vas a dejar de ver su ranking. Tu plan, tus monedas y tu nivel siguen igual.`)) return
+    const { error } = await supabase.rpc('leave_group')
     if (error) return setError(errorMessage(error))
     await reload()
   }
@@ -218,6 +221,25 @@ export default function Groups() {
 
   const small = 'btn min-h-9 px-3 py-1 text-sm'
 
+  const joinForm = (
+    <form onSubmit={join} className="flex gap-2">
+      <input className="input font-mono uppercase tracking-widest" required maxLength={8} placeholder="ab12cd34" value={code} onChange={(e) => setCode(e.target.value)} aria-label="Código de invitación" />
+      <button className={`${small} btn-primary`} disabled={busy}>Unirme</button>
+    </form>
+  )
+  const createForm = (
+    <form onSubmit={create} className="space-y-3">
+      <input className="input" required maxLength={40} placeholder="Nombre del grupo" value={name} onChange={(e) => setName(e.target.value)} aria-label="Nombre del grupo" />
+      <div className="flex items-end gap-2">
+        <div className="flex-1">
+          <label className="label" htmlFor="dur">Días del reto</label>
+          <input id="dur" className="input" type="number" min={1} max={366} required value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+        </div>
+        <button className={`${small} btn-primary mb-1`} disabled={busy}>Crear grupo</button>
+      </div>
+    </form>
+  )
+
   return (
     <>
       <PageHeader title="Grupo" subtitle={selected ? selected.name : 'Jugá con tus amigos'} />
@@ -226,25 +248,22 @@ export default function Groups() {
       {selected ? (
         <>
           {groups.length > 1 && <GroupPicker groups={groups} selected={selected} onSelect={select} />}
-          <section className="card mb-4">
-            <h2 className="mb-2 font-bold">👥 Tu grupo</h2>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs text-muted">Código de invitación</p>
-                <p className="font-mono text-xl font-bold tracking-widest text-primary">{selected.invite_code}</p>
-              </div>
-              <button className={`${small} btn-primary shrink-0`} onClick={share}>{copied ? '¡Copiado!' : 'Invitar'}</button>
+          <div className="flex items-center justify-between gap-3 pb-5">
+            <div className="min-w-0">
+              <p className="text-xs text-muted">Código para invitar</p>
+              <p className="font-mono text-xl font-bold tracking-widest text-primary">{selected.invite_code}</p>
+              <p className="text-xs text-muted">
+                {members !== null && `${members} ${members === 1 ? 'miembro' : 'miembros'} · `}
+                reto de {selected.duration_days} días desde el {new Date(selected.start_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}
+              </p>
             </div>
-            <p className="mt-2 text-xs text-muted">
-              {members !== null && `${members} ${members === 1 ? 'miembro' : 'miembros'} · `}
-              Reto de {selected.duration_days} días desde el {new Date(selected.start_date + 'T12:00:00Z').toLocaleDateString('es-ES', { timeZone: 'UTC' })}
-            </p>
-          </section>
+            <button className={`${small} btn-primary shrink-0`} onClick={share}>{copied ? '¡Copiado!' : 'Invitar'}</button>
+          </div>
 
           <Reviews groupId={selected.id} me={me} />
 
-          <section className="card mb-4">
-            <h2 className="mb-2 font-bold">📣 Actividad</h2>
+          <section className="border-t border-line py-5">
+            <h2 className="mb-1 font-bold">📣 Actividad</h2>
             <Feed groupId={selected.id} me={me} />
           </section>
 
@@ -252,32 +271,31 @@ export default function Groups() {
 
           <FriendsPlans groupId={selected.id} me={me} />
 
-          <div className="mt-6 text-center">
-            <button className={`${small} btn-ghost text-danger`} onClick={leave}>Salir de «{selected.name}»</button>
-          </div>
+          <section className="border-t border-line py-5">
+            <button className="flex w-full items-center justify-between font-bold" onClick={() => setSwitching(!switching)} aria-expanded={switching}>
+              <span>🔀 Cambiar de grupo</span><span className="text-sm text-muted">{switching ? 'Cerrar' : 'Abrir'}</span>
+            </button>
+            {switching && (
+              <div className="mt-3 space-y-5">
+                <p className="text-xs text-muted">Cada persona juega en un grupo. Si entrás a otro o creás uno nuevo, salís de «{selected.name}». Tu plan, tus monedas y tu nivel siguen igual; el ranking del grupo nuevo cuenta desde que entrás.</p>
+                <div><p className="mb-2 text-sm font-semibold">Unirme con un código</p>{joinForm}</div>
+                <div><p className="mb-2 text-sm font-semibold">Crear un grupo nuevo</p>{createForm}</div>
+                <button className={`${small} btn-ghost text-danger`} onClick={leave}>Solo salir de «{selected.name}»</button>
+              </div>
+            )}
+          </section>
         </>
       ) : (
         <>
-          <section className="card mb-4">
-            <h2 className="mb-1 font-bold">🔑 Unirme con código</h2>
-            <p className="mb-3 text-xs text-muted">Pedile el código a quien creó el grupo.</p>
-            <form onSubmit={join} className="flex gap-2">
-              <input className="input font-mono uppercase tracking-widest" required maxLength={8} placeholder="ab12cd34" value={code} onChange={(e) => setCode(e.target.value)} />
-              <button className={`${small} btn-primary`} disabled={busy}>Unirme</button>
-            </form>
+          <section className="pb-5">
+            <h2 className="mb-1 font-bold">🔑 Unirme con un código</h2>
+            <p className="mb-3 text-xs text-muted">Pedile el código a alguien del grupo.</p>
+            {joinForm}
           </section>
-
-          <section className="card mb-4">
-            <h2 className="mb-1 font-bold">✨ Crear grupo</h2>
-            <p className="mb-3 text-xs text-muted">Una persona puede estar en un solo grupo. El reto empieza hoy y solo cuentan los puntos de esas fechas.</p>
-            <form onSubmit={create} className="space-y-3">
-              <input className="input" required maxLength={40} placeholder="Nombre del grupo" value={name} onChange={(e) => setName(e.target.value)} />
-              <div>
-                <label className="label" htmlFor="dur">Duración del reto (días)</label>
-                <input id="dur" className="input" type="number" min={1} max={366} required value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-              </div>
-              <button className={`${small} btn-primary`} disabled={busy}>Crear grupo</button>
-            </form>
+          <section className="border-t border-line py-5">
+            <h2 className="mb-1 font-bold">✨ Crear un grupo</h2>
+            <p className="mb-3 text-xs text-muted">El reto empieza hoy. Después compartí el código.</p>
+            {createForm}
           </section>
         </>
       )}

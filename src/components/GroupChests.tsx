@@ -50,7 +50,7 @@ export default function GroupChests({ groupId, me }: { groupId: string; me: stri
   }
 
   return (
-    <section className="card mb-4">
+    <section className="border-t border-line py-5">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="font-bold">🧰 Cofres del grupo</h2>
         {!creating && <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" onClick={() => setCreating(true)}>+ Nuevo</button>}

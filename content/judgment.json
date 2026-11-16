@@ -57,6 +57,28 @@
       }
     },
     {
+      "id": "juegos",
+      "text": "¿Jugaste videojuegos ayer? ¿Cuántas horas?",
+      "hint": "Contá el total del día, redondeado. La primera hora no resta.",
+      "type": "count",
+      "unit": "horas",
+      "category": "vicio",
+      "params": {
+        "zero": 2,
+        "free": 1,
+        "per_unit": -2,
+        "min": -8
+      },
+      "condition": {
+        "area": "juegos",
+        "in": [
+          "poco",
+          "mucho"
+        ],
+        "opt": "juegos"
+      }
+    },
+    {
       "id": "gasto",
       "text": "¿Gastaste en algo que no necesitabas? ¿Cuánto?",
       "hint": "Ese gasto alimenta al Dragón.",

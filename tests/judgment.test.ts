@@ -69,7 +69,7 @@ describe('preguntas del Juicio', () => {
 
   it('sin responder se pregunta todo; con tabaco «no» no aparece fumar; la persona puede activarlo', async () => {
     let q = await ids(A)
-    expect(q.filter((x) => x.kind === 'core').map((x) => x.id)).toEqual(['comida', 'fumar', 'alcohol', 'gasto', 'ahorro', 'disfrute'])
+    expect(q.filter((x) => x.kind === 'core').map((x) => x.id)).toEqual(['comida', 'fumar', 'alcohol', 'juegos', 'gasto', 'ahorro', 'disfrute'])
     await as(A, `select set_area_answers('{"tabaco":"no","alcohol":"poco"}'::jsonb)`)
     q = await ids(A)
     expect(q.map((x) => x.id)).not.toContain('fumar')

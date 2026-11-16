@@ -121,7 +121,9 @@ insert into public.catalog_habits (id, area, name, criterion, tier, target, unit
   ('pomodoros_4', 'foco', '4 bloques de 25 minutos', '4 bloques de 25 minutos de trabajo concentrado, con pausas.', 2, 4, 'bloques', false),
   ('ayudar_alguien', 'social', 'Ayudar a alguien', 'Hacer algo concreto por otra persona sin que te lo pida.', 1, 1, null, false),
   ('comida_compartida', 'social', 'Comer con alguien sin pantallas', 'Una comida compartida, con los teléfonos guardados.', 2, 1, null, false),
-  ('hacer_cama', 'foco', 'Hacer la cama', 'Hacer la cama al levantarte.', 1, 1, null, false)
+  ('hacer_cama', 'foco', 'Hacer la cama', 'Hacer la cama al levantarte.', 1, 1, null, false),
+  ('juegos_1h', 'foco', 'Máximo 1 h de videojuegos', 'Jugar como mucho una hora en el día (PC, consola o celular).', 1, 1, null, false),
+  ('dia_sin_juegos', 'foco', 'Un día sin videojuegos', 'No jugar videojuegos en todo el día.', 2, 1, null, false)
 on conflict (id) do update set area = excluded.area, name = excluded.name, criterion = excluded.criterion,
   tier = excluded.tier, target = excluded.target, unit = excluded.unit, private_default = excluded.private_default;
 -- END CATALOG

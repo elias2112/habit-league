@@ -290,7 +290,13 @@ function HabitRow({ h, busy, onToggle, onAdd, onPhoto }: {
       {measurable && (
         <div className="mt-3">
           <div className="mb-2"><Bar value={Math.min(h.count, h.target!)} max={h.target!} className="bg-primary" /></div>
-          {big ? (
+          {h.block === 'fuerza' ? (
+            // Fuerza base: solo de a 10 (repeticiones o segundos), sin escribir.
+            <div className="flex items-center gap-2">
+              <button className="btn btn-ghost flex-1" disabled={busy || h.count === 0} onClick={() => onAdd(-Math.min(CONFIG.strengthTargetStep, h.count))} aria-label={`Restar ${CONFIG.strengthTargetStep}`}>−{CONFIG.strengthTargetStep}</button>
+              <button className="btn btn-primary flex-[2]" disabled={busy} onClick={() => onAdd(CONFIG.strengthTargetStep)}>+{CONFIG.strengthTargetStep} {h.unit}</button>
+            </div>
+          ) : big ? (
             <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const k = parseInt(amount, 10); if (k) { onAdd(k); setAmount('') } }}>
               <input className="input min-w-0 flex-1" inputMode="numeric" pattern="-?[0-9]*" placeholder={`¿Cuántas ${h.unit ?? ''}?`}
                 value={amount} onChange={(e) => setAmount(e.target.value)} aria-label={`Cantidad de ${h.unit ?? ''}`} />

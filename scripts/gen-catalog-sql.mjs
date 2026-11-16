@@ -140,3 +140,21 @@ replaceBlock(M7, 'STORE4', [
   '  area = excluded.area, unlock_level = excluded.unlock_level, group_only = excluded.group_only, registry_only = excluded.registry_only;',
 ].join('\n'))
 console.log(`✓ ${store.items.length} artículos de tienda → 007`)
+
+// ── 009: todo el contenido de nuevo (catálogo con pilar, vicios, preguntas del Juicio). Así, un cambio de contenido
+// se aplica corriendo solo la 009 (sin re-ejecutar de la 003 en adelante).
+replaceBlock('supabase/migrations/009_ajustes.sql', 'CONTENT9', [
+  'insert into public.catalog_habits (id, area, name, criterion, tier, target, unit, private_default, pillar) values',
+  habits.map((h) => `  (${[h.id, h.area, h.name, h.criterion, h.tier, h.target ?? 1, h.unit ?? null, Boolean(h.private_default), cfg.areaToPillar[h.area] ?? null].map(q).join(', ')})`).join(',\n'),
+  'on conflict (id) do update set area = excluded.area, name = excluded.name, criterion = excluded.criterion, tier = excluded.tier,',
+  '  target = excluded.target, unit = excluded.unit, private_default = excluded.private_default, pillar = excluded.pillar;',
+  'insert into public.vice_catalog (id, name, area, slip, slip_penalty) values',
+  vj.vices.map((v) => `  (${[v.id, v.name, v.area, v.slip, v.slip_penalty].map(q).join(', ')})`).join(',\n'),
+  'on conflict (id) do update set name = excluded.name, area = excluded.area, slip = excluded.slip, slip_penalty = excluded.slip_penalty;',
+  'insert into public.judgment_questions (id, kind, text, hint, type, unit, category, params, condition, sort) values',
+  qRows.join(',\n'),
+  'on conflict (id) do update set kind = excluded.kind, text = excluded.text, hint = excluded.hint, type = excluded.type,',
+  '  unit = excluded.unit, category = excluded.category, params = excluded.params, condition = excluded.condition, sort = excluded.sort;',
+  `delete from public.judgment_questions where id not in (${qs.map((x) => q(x.id)).join(', ')});`,
+].join('\n'))
+console.log(`✓ ${habits.length} hábitos, ${vj.vices.length} vicios y ${qs.length} preguntas → 009`)

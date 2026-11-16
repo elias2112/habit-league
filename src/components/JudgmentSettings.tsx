@@ -9,6 +9,7 @@ interface Settings { share_judgment: boolean; judgment_opt: Record<string, boole
 const OPTS = [
   { key: 'fumar', label: 'Preguntarme si fumé' },
   { key: 'alcohol', label: 'Preguntarme si tomé alcohol' },
+  { key: 'juegos', label: 'Preguntarme cuánto jugué a videojuegos' },
 ]
 
 /** Preferencias del Juicio de la mañana (la liga quedó sin uso desde la 007). */

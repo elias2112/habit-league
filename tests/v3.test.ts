@@ -260,7 +260,9 @@ describe('monedas, billetera y tienda', () => {
     await group(A)
     const [{ ws }] = await h.admin<{ ws: number }>(`select (user_today($1) - week_start(user_today($1)))::int ws`, [A])
     const days = ws + 2 // cubre hasta el sábado de la semana pasada
-    await perfectDays(A, days, 10)
+    const { ids } = await perfectDays(A, days, 10)
+    // Hoy también (si hoy es lunes, la semana todavía no tiene otro día).
+    for (const id of ids) await h.admin(`insert into habit_logs (habit_id, log_date, count) values ($1, user_today($2), $3)`, [id, A, id === ids[0] ? 15 : 1])
     const cd = await h.admin<{ day: string; to_pool: string; closed: boolean }>(`select day::text, to_pool, closed from coin_days($1)`, [A])
     const lastWeek = cd.filter((d) => d.day < (cd.find((x) => x.day === cd.at(-1)!.day)!.day)).slice(0, days - ws)
     expect(lastWeek.length).toBeGreaterThan(0)

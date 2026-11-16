@@ -17,7 +17,7 @@ import { ErrorBox, PillarIcon, PillarSelect, WEIGHT_LABEL } from '../components/
 
 type Phase = 'flow' | 'sport' | 'quiz' | 'areas' | 'free' | 'result' | 'pack' | 'group'
 type SectionId = 'objetivos' | 'fuerza' | 'vos' | 'habitos'
-interface StrengthDraft { canDo: Record<string, number | null>; targets: Record<string, number> }
+interface StrengthDraft { canDo: Record<string, number | null>; targets: Record<string, number>; off?: string[] }
 interface Draft {
   s: OnboardingState
   goalAnswers: Record<string, Answers>
@@ -96,6 +96,7 @@ export default function Onboarding() {
   const [hasAreas, setHasAreas] = useState(false)
   const [pack, setPack] = useState<DraftHabit[] | null>(null)
   const [vices, setVices] = useState<Set<string>>(new Set())
+  const [suggestedVices, setSuggestedVices] = useState<string[]>([])
   const [adding, setAdding] = useState(false)
   const [joke, setJoke] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -130,7 +131,15 @@ export default function Onboarding() {
     const used = new Set(fromGoals.map((h) => h.catalog_id).filter(Boolean) as string[])
     setPack([...fromGoals, ...suggestGeneral(used)])
     const v = new Set<string>()
-    objs.forEach((o) => { if (o.vice) v.add(o.vice.suggestion_id) })
+    const all: string[] = []
+    objs.forEach((o) => { if (o.vice) { v.add(o.vice.suggestion_id); all.push(o.vice.suggestion_id) } })
+    for (const a of AREA_ITEMS) {
+      const ans = d.areas[a.id]
+      if (!a.vice || all.includes(a.vice) || (ans !== 'poco' && ans !== 'mucho')) continue
+      all.push(a.vice)
+      if (ans === 'mucho') v.add(a.vice)
+    }
+    setSuggestedVices(all)
     setVices(v)
   }
 
@@ -300,8 +309,11 @@ export default function Onboarding() {
       }
       const sd = d.strength
       const cap = maxTargetFor(0)
-      const answered = STRENGTH.every((e) => sd.canDo[e.id] !== undefined && sd.canDo[e.id] !== null)
-      const easy = answered && STRENGTH.some((e) => needsEasyVariant(sd.canDo[e.id] ?? 0))
+      const off = new Set(sd.off ?? [])
+      const chosen = STRENGTH.filter((e) => !off.has(e.id))
+      const answered = chosen.length > 0 && chosen.every((e) => sd.canDo[e.id] !== undefined && sd.canDo[e.id] !== null)
+      const easy = answered && chosen.some((e) => needsEasyVariant(sd.canDo[e.id] ?? 0))
+      const toggleEx = (id: string) => setD({ ...d, strength: { ...sd, off: off.has(id) ? [...off].filter((x) => x !== id) : [...off, id] } })
       const setCanDo = (id: string, v: number) => setD({ ...d, strength: {
         canDo: { ...sd.canDo, [id]: v }, targets: { ...sd.targets, [id]: suggestTarget(v, 0) } } })
       const nudge = (id: string, delta: number) => setD({ ...d, strength: { ...sd, targets: {
@@ -310,7 +322,9 @@ export default function Onboarding() {
         <Shell onBack={back} section="fuerza" frac={0.3} screen="strength" footer={
           <div className="space-y-2">
             <button className="btn btn-primary w-full" disabled={!answered}
-              onClick={() => go({ ...d, s: { ...d.s, strength: easy ? { targets: {}, easy: true } : { targets: Object.fromEntries(STRENGTH.map((e) => [e.id, sd.targets[e.id]])) } } })}>
+              onClick={() => go({ ...d, s: { ...d.s, strength: easy
+                ? { targets: {}, easy: true, exercises: chosen.map((e) => e.id) }
+                : { targets: Object.fromEntries(chosen.map((e) => [e.id, sd.targets[e.id]])) } } })}>
               {easy ? ST.easyAccept : ST.accept}
             </button>
             <button className="btn btn-ghost w-full" onClick={() => setJoke(nextJoke())}>{ST.decline}</button>
@@ -318,8 +332,14 @@ export default function Onboarding() {
         }>
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">💪 {ST.title}</p>
           <h1 className="mt-1 text-2xl font-bold leading-snug">{ST.intro}</h1>
+          <p className="mt-2 text-sm text-muted">{ST.pick}</p>
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Ejercicios">
+            {STRENGTH.map((e) => (
+              <Chip key={e.id} on={!off.has(e.id)} onClick={() => toggleEx(e.id)}>{off.has(e.id) ? '+ ' : '✓ '}{e.name}</Chip>
+            ))}
+          </div>
           <div className="mt-5 space-y-5">
-            {STRENGTH.map((e) => {
+            {chosen.map((e) => {
               const v = sd.canDo[e.id]
               return (
                 <div key={e.id}>
@@ -342,7 +362,7 @@ export default function Onboarding() {
           {easy && (
             <div className="mt-5 rounded-2xl border border-xp/50 bg-xp/10 p-3 text-sm">
               <p>{fill(ST.easy)}</p>
-              <ul className="mt-1 list-disc pl-5">{STRENGTH.map((e) => <li key={e.id}>{easyName(e.id)}</li>)}</ul>
+              <ul className="mt-1 list-disc pl-5">{chosen.map((e) => <li key={e.id}>{easyName(e.id)}</li>)}</ul>
             </div>
           )}
           <div className="mt-5 rounded-2xl border border-line bg-surface p-3 text-sm">
@@ -491,7 +511,7 @@ export default function Onboarding() {
         <h2 className="mb-2 mt-6 font-bold">💪 Fuerza base</h2>
         {str === 'declined' || !str
           ? <p className="rounded-xl bg-surface px-3 py-2 text-sm text-muted">Sin fuerza base.</p>
-          : <ul className="space-y-1 text-sm">{STRENGTH.map((e) => (
+          : <ul className="space-y-1 text-sm">{STRENGTH.filter((e) => (str.easy ? !str.exercises || str.exercises.includes(e.id) : e.id in str.targets)).map((e) => (
               <li key={e.id} className="flex justify-between rounded-xl bg-surface px-3 py-2">
                 <span>{str.easy ? easyName(e.id) : e.name}</span>
                 <span className="text-muted">{str.easy ? CONFIG.strengthEasyTarget : str.targets[e.id]} {e.unit}</span>
@@ -516,13 +536,13 @@ export default function Onboarding() {
             </div>
           : <button className="btn btn-ghost mt-2 w-full" onClick={() => setAdding(true)}>+ Agregar del catálogo</button>}
 
-        {vices.size > 0 && (
+        {suggestedVices.length > 0 && (
           <div className="mt-6 rounded-2xl border border-danger/40 bg-danger/10 p-3">
             <p className="text-sm font-semibold">Vicios para seguir</p>
-            <p className="text-xs text-muted">Cada día marcás "no lo hice" (suma) o "lo hice" (multiplica tus puntos, salvo que tengas un permiso). Es privado.</p>
-            {[...vices].map((id) => (
+            <p className="text-xs text-muted">Cada día marcás "no lo hice" (suma) o "lo hice" (multiplica tus puntos, salvo que tengas un permiso). Es privado. {ONB.areas.viceNote}</p>
+            {suggestedVices.map((id) => (
               <label key={id} className="mt-2 flex items-center gap-2 text-sm">
-                <input type="checkbox" defaultChecked className="h-5 w-5 accent-[var(--color-primary)]" onChange={(e) => { const n = new Set(vices); if (!e.target.checked) n.delete(id); else n.add(id); setVices(n) }} />
+                <input type="checkbox" checked={vices.has(id)} className="h-5 w-5 accent-[var(--color-primary)]" onChange={(e) => { const n = new Set(vices); if (!e.target.checked) n.delete(id); else n.add(id); setVices(n) }} />
                 {viceById(id)?.name ?? id}
               </label>
             ))}

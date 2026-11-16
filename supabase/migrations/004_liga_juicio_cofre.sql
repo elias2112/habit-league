@@ -36,9 +36,10 @@ insert into public.judgment_questions (id, kind, text, hint, type, unit, categor
   ('comida', 'core', '¿Comiste mal ayer (chatarra, atracón, nada de verdura)?', null, 'yesno', null, 'vicio', '{"yes":-5,"no":2}'::jsonb, null, 0),
   ('fumar', 'core', '¿Fumaste o vapeaste ayer? ¿Cuántos cigarrillos o sesiones?', 'Contá cada cigarrillo o cada vez que agarraste el vaper.', 'count', 'cigarrillos', 'vicio', '{"zero":3,"free":0,"per_unit":-1,"min":-10}'::jsonb, '{"area":"tabaco","in":["poco","mucho"],"opt":"fumar"}'::jsonb, 1),
   ('alcohol', 'core', '¿Tomaste alcohol ayer? ¿Cuántos tragos?', 'Hasta 2 no restan.', 'count', 'tragos', 'vicio', '{"zero":2,"free":2,"per_unit":-2,"min":-10}'::jsonb, '{"area":"alcohol","in":["poco","mucho"],"opt":"alcohol"}'::jsonb, 2),
-  ('gasto', 'core', '¿Gastaste en algo que no necesitabas? ¿Cuánto?', 'Ese gasto alimenta al Dragón.', 'money', null, 'dinero', '{"zero":2,"per_5":-1,"cap":-10}'::jsonb, null, 3),
-  ('ahorro', 'core', '¿Ahorraste algo aparte de tus hábitos? ¿Cuánto?', 'Lo podés guardar en uno de tus cofres.', 'money', null, 'dinero', '{"zero":0,"per_5":1,"cap":10}'::jsonb, null, 4),
-  ('disfrute', 'core', '¿Hiciste algo solo porque lo disfrutás?', null, 'yesno', null, 'disfrute', '{"yes":3,"no":0}'::jsonb, null, 5),
+  ('juegos', 'core', '¿Jugaste videojuegos ayer? ¿Cuántas horas?', 'Contá el total del día, redondeado. La primera hora no resta.', 'count', 'horas', 'vicio', '{"zero":2,"free":1,"per_unit":-2,"min":-8}'::jsonb, '{"area":"juegos","in":["poco","mucho"],"opt":"juegos"}'::jsonb, 3),
+  ('gasto', 'core', '¿Gastaste en algo que no necesitabas? ¿Cuánto?', 'Ese gasto alimenta al Dragón.', 'money', null, 'dinero', '{"zero":2,"per_5":-1,"cap":-10}'::jsonb, null, 4),
+  ('ahorro', 'core', '¿Ahorraste algo aparte de tus hábitos? ¿Cuánto?', 'Lo podés guardar en uno de tus cofres.', 'money', null, 'dinero', '{"zero":0,"per_5":1,"cap":10}'::jsonb, null, 5),
+  ('disfrute', 'core', '¿Hiciste algo solo porque lo disfrutás?', null, 'yesno', null, 'disfrute', '{"yes":3,"no":0}'::jsonb, null, 6),
   ('cama', 'bonus', '¿Hiciste la cama?', null, 'yesno', null, 'bonus', '{"yes":3,"no":0}'::jsonb, null, 0),
   ('buena_accion', 'bonus', '¿Hiciste una buena acción por alguien?', null, 'yesno', null, 'bonus', '{"yes":3,"no":0}'::jsonb, null, 1),
   ('ordenar', 'bonus', '¿Ordenaste algo durante 10 minutos?', null, 'yesno', null, 'bonus', '{"yes":3,"no":0}'::jsonb, null, 2),
@@ -53,7 +54,7 @@ insert into public.judgment_questions (id, kind, text, hint, type, unit, categor
   ('luz_natural', 'bonus', '¿Te diste 10 minutos de luz natural a la mañana?', null, 'yesno', null, 'bonus', '{"yes":3,"no":0}'::jsonb, null, 11)
 on conflict (id) do update set kind = excluded.kind, text = excluded.text, hint = excluded.hint, type = excluded.type,
   unit = excluded.unit, category = excluded.category, params = excluded.params, condition = excluded.condition, sort = excluded.sort;
-delete from public.judgment_questions where id not in ('comida', 'fumar', 'alcohol', 'gasto', 'ahorro', 'disfrute', 'cama', 'buena_accion', 'ordenar', 'familia', 'aprender', 'sin_auriculares', 'cocinar_otros', 'cumplido', 'sin_quejas', 'comida_sin_celular', 'agua_despertar', 'luz_natural');
+delete from public.judgment_questions where id not in ('comida', 'fumar', 'alcohol', 'juegos', 'gasto', 'ahorro', 'disfrute', 'cama', 'buena_accion', 'ordenar', 'familia', 'aprender', 'sin_auriculares', 'cocinar_otros', 'cumplido', 'sin_quejas', 'comida_sin_celular', 'agua_despertar', 'luz_natural');
 insert into public.game_config (key, value) values
   ('bonus_per_day', '2'::jsonb),
   ('boost_factor', '1.5'::jsonb),

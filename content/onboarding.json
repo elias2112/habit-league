@@ -296,7 +296,8 @@
       "Nadie se arrepintió nunca de 10 sentadillas. Bueno, capaz alguien. ¿Vos querés ser esa persona?"
     ],
     "retry": "Dale, la hago",
-    "skip": "Sigo sin fuerza base"
+    "skip": "Sigo sin fuerza base",
+    "pick": "Elegí qué ejercicios vas a hacer (al menos uno)."
   },
   "areas": {
     "text": "¿Cuánto te pasa con cada una de estas cosas?",
@@ -318,29 +319,36 @@
     "items": [
       {
         "id": "tabaco",
-        "text": "Fumar o vapear"
+        "text": "Fumar o vapear",
+        "vice": "fumar"
       },
       {
         "id": "alcohol",
-        "text": "Alcohol"
+        "text": "Alcohol",
+        "vice": "alcohol"
       },
       {
         "id": "comida",
-        "text": "Comida chatarra o delivery"
+        "text": "Comida chatarra o delivery",
+        "vice": "chatarra"
       },
       {
         "id": "dulce",
-        "text": "Dulces"
+        "text": "Dulces",
+        "vice": "dulces"
       },
       {
         "id": "redes",
-        "text": "Redes sociales"
+        "text": "Redes sociales",
+        "vice": "redes"
       },
       {
         "id": "juegos",
-        "text": "Videojuegos (PC, consola)"
+        "text": "Videojuegos (PC, consola)",
+        "vice": "videojuegos"
       }
-    ]
+    ],
+    "viceNote": "Con «poco» o «mucho» te proponemos seguirlo como vicio en tu plan (con «mucho» viene marcado). Lo podés destildar."
   },
   "freeText": {
     "title": "Para conocerte un poco más",

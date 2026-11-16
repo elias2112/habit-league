@@ -29,7 +29,8 @@ insert into public.vice_catalog (id, name, area, slip, slip_penalty) values
   ('dulces', 'Dulces y gaseosas', 'alimentacion', 'Hoy me pasé con lo dulce', 5),
   ('redes', 'Redes sociales de más', 'mente', 'Hoy me pasé con las redes', 5),
   ('trasnochar', 'Trasnochar', 'sueno', 'Anoche me acosté muy tarde', 10),
-  ('apuestas', 'Apuestas', 'foco', 'Hoy aposté', 15)
+  ('apuestas', 'Apuestas', 'foco', 'Hoy aposté', 15),
+  ('videojuegos', 'Videojuegos de más', 'foco', 'Hoy jugué de más', 5)
 on conflict (id) do update set name = excluded.name, area = excluded.area, slip = excluded.slip, slip_penalty = excluded.slip_penalty;
 insert into public.game_config (key, value) values ('vice_multiplier', '0.9'::jsonb)
 on conflict (key) do update set value = excluded.value;

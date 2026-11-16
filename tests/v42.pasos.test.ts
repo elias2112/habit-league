@@ -324,3 +324,43 @@ describe('paso 4: tienda', () => {
     expect(await h.admin(`select * from strength_settlements where user_id = $1`, [A])).toHaveLength(0)
   })
 })
+
+// ───────────────────────────── 009: ajustes del dueño ─────────────────────────────
+describe('009: ejercicios elegidos, cambiar de grupo y videojuegos', () => {
+  const ex = (u: string) => h.admin<{ strength_id: string; name: string; target: string }>(
+    `select hb.strength_id, hb.name, ph.target from plan_habits ph join habits hb on hb.id = ph.habit_id
+     where ph.plan_id = plan_for($1, user_today($1)) and hb.block = 'fuerza' order by hb.strength_id`, [u])
+
+  it('la fuerza base tiene solo los ejercicios elegidos (también en la variante fácil); ninguno no vale', async () => {
+    await h.as(A, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{"flexiones":30,"plancha":40}}'::jsonb)`, [BASE])
+    expect((await ex(A)).map((x) => [x.strength_id, n(x.target)])).toEqual([['flexiones', 30], ['plancha', 40]])
+    await h.as(B, `select create_initial_plan($1::jsonb, '[]', '[]', '{"easy":true,"exercises":["sentadillas"]}'::jsonb)`, [BASE])
+    expect((await ex(B)).map((x) => x.name)).toEqual(['Sentarse y pararse de una silla'])
+    await expect(h.as(C, `select create_initial_plan($1::jsonb, '[]', '[]', '{"targets":{}}'::jsonb)`, [BASE])).rejects.toThrow(/al menos un ejercicio/)
+  })
+
+  it('cambiar de grupo: sin confirmar no deja; creando o uniéndose sale del actual, y el grupo pasa al más antiguo', async () => {
+    const g1 = await group(A, B)
+    await expect(h.as(A, `select * from create_group('Otro', 30)`)).rejects.toThrow(/salís del actual/)
+    const [g2] = await h.as<{ id: string; invite_code: string }>(A, `select * from create_group('Otro', 30, true)`)
+    expect(await h.admin(`select group_id from group_members where user_id = $1`, [A])).toEqual([{ group_id: g2.id }])
+    expect(await h.admin(`select created_by from groups where id = $1`, [g1])).toEqual([{ created_by: B }])  // A creó g1: pasa a B
+    await expect(h.as(B, `select join_group($1)`, [g2.invite_code])).rejects.toThrow(/salís del actual/)
+    await h.as(B, `select join_group($1, true)`, [g2.invite_code])
+    expect(await h.admin(`select count(*)::int c from groups where id = $1`, [g1])).toEqual([{ c: 0 }])     // g1 quedó vacío: se borra
+    await h.as(B, `select leave_group()`)
+    expect(await h.admin(`select count(*)::int c from group_members where user_id = $1`, [B])).toEqual([{ c: 0 }])
+  })
+
+  it('videojuegos: vicio y hábitos en el catálogo; la pregunta del Juicio va según la respuesta por área', async () => {
+    expect(await h.admin(`select id from vice_catalog where id = 'videojuegos'`)).toHaveLength(1)
+    expect(await h.admin(`select id, pillar from catalog_habits where id in ('juegos_1h', 'dia_sin_juegos') order by id`))
+      .toEqual([{ id: 'dia_sin_juegos', pillar: 'mente' }, { id: 'juegos_1h', pillar: 'mente' }])
+    const qs = async (u: string) => (await h.admin<{ id: string }>(`select id from judgment_questions_for($1, current_date)`, [u])).map((x) => x.id)
+    expect(await qs(A)).toContain('juegos')                                   // sin responder: se pregunta
+    await h.as(A, `select set_area_answers('{"juegos":"no"}'::jsonb)`)
+    expect(await qs(A)).not.toContain('juegos')
+    await h.as(B, `select set_area_answers('{"juegos":"mucho"}'::jsonb)`)
+    expect(await qs(B)).toContain('juegos')
+  })
+})

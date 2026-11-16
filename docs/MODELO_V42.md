@@ -8,6 +8,7 @@ Se guardan definiciones, fotos del plan y eventos crudos. **Nada de totales**: e
 ## Migraciones
 - **007a_respaldo.sql**: copia todas las tablas (cuentas, grupos, juego, cofres, liga, Juicio) a `respaldo_v4`, sin acceso desde la app. Mientras la 007 no reinició, cada corrida refresca la copia; después no la toca.
 - **008_quitar_liga.sql**: ver «Liga».
+- **009_ajustes.sql** (pedido del dueño, 2026-11-16): elegir qué ejercicios de fuerza base hacer (al menos uno), cambiar de grupo (crear o unirse saliendo del actual; `leave_group`), videojuegos (vicio, hábitos «Máximo 1 h de videojuegos» y «Un día sin videojuegos», pregunta del Juicio según la respuesta por área) y el contenido completo regenerado (`CONTENT9`).
 - **007_v42.sql**:
   1. Se frena si no hay respaldo o si el respaldo no coincide con las tablas vivas (alguien usó la app entre medio).
   2. **Reinicio de todos, una sola vez** (`respaldo_v4.reinicio`): borra planes, hábitos, registros, vicios, objetivos, cofres personales, propuestas, compras, avisos, parámetros votados (`group_config`) y la tienda de cada grupo (se vuelve a sembrar con el catálogo nuevo). Quedan cuentas, grupos, cofres del grupo, el Juicio y la liga. Las fotos de Storage no se pueden borrar desde SQL.

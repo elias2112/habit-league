@@ -317,6 +317,22 @@
       "criterion": "Hacer la cama al levantarte.",
       "tier": 1,
       "auto": false
+    },
+    {
+      "id": "juegos_1h",
+      "area": "foco",
+      "name": "Máximo 1 h de videojuegos",
+      "criterion": "Jugar como mucho una hora en el día (PC, consola o celular).",
+      "tier": 1,
+      "auto": false
+    },
+    {
+      "id": "dia_sin_juegos",
+      "area": "foco",
+      "name": "Un día sin videojuegos",
+      "criterion": "No jugar videojuegos en todo el día.",
+      "tier": 2,
+      "auto": false
     }
   ]
 }
