@@ -134,6 +134,7 @@ insert into public.catalog_habits (id, area, name, criterion, tier, target, unit
   ('agradecer', 'social', 'Agradecer a alguien', 'Agradecerle a alguien por algo concreto.', 1, 1, null, false, null),
   ('llamada_10', 'social', 'Llamar a alguien 10 minutos', 'Una llamada o videollamada de al menos 10 minutos.', 2, 1, null, false, null),
   ('plan_persona', 'social', 'Pasar tiempo en persona con alguien', 'Compartir un rato en persona con alguien que te importa.', 3, 1, null, false, null),
+  ('pasos_7k', 'cuerpo', '7.000 pasos', 'Llegar a 7.000 pasos en el día (mirá el contador del teléfono). Cargá los pasos del día.', 2, 7000, 'pasos', false, 'cuerpo'),
   ('pasos_10k', 'cuerpo', '10.000 pasos', 'Llegar a 10.000 pasos en el día (podés mirar el contador del teléfono).', 2, 1, null, false, 'cuerpo'),
   ('correr_5k', 'cuerpo', 'Correr 5 km', 'Correr al menos 5 km, de una o en tramos.', 3, 1, null, false, 'cuerpo'),
   ('fumar_menos', 'cuerpo', 'Fumar menos que ayer', 'Fumar menos cigarrillos que el día anterior.', 2, 1, null, true, 'cuerpo'),

@@ -363,4 +363,18 @@ describe('009: ejercicios elegidos, cambiar de grupo y videojuegos', () => {
     await h.as(B, `select set_area_answers('{"juegos":"mucho"}'::jsonb)`)
     expect(await qs(B)).toContain('juegos')
   })
+
+  it('«¿Cuándo lo hacés?»: lo guarda solo su dueño, sale en my_day y no cambia el puntaje; 7.000 pasos es medible', async () => {
+    await h.as(A, `select create_initial_plan($1::jsonb)`, [BASE])
+    const [hb] = await h.admin<{ id: string }>(`select id from habits where user_id = $1 and catalog_id = 'caminar_30'`, [A])
+    const before = (await h.one<{ score: unknown }>(A, `select my_day() r`)).score
+    await h.as(A, `select set_habit_cue($1, 'después del desayuno')`, [hb.id])
+    await expect(h.as(B, `select set_habit_cue($1, 'x')`, [hb.id])).rejects.toThrow(/inexistente/)
+    const d = await h.one<{ score: unknown; habits: { id: string; cue: string | null }[] }>(A, `select my_day() r`)
+    expect(d.habits.find((x) => x.id === hb.id)!.cue).toBe('después del desayuno')
+    expect(d.score).toEqual(before)
+    await h.as(A, `select set_habit_cue($1, '')`, [hb.id])
+    expect((await h.one<{ habits: { id: string; cue: string | null }[] }>(A, `select my_day() r`)).habits.find((x) => x.id === hb.id)!.cue).toBeNull()
+    expect(await h.admin(`select target, unit from catalog_habits where id = 'pasos_7k'`)).toEqual([{ target: 7000, unit: 'pasos' }])
+  })
 })

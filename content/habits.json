@@ -175,6 +175,16 @@
       "tier": 3
     },
     {
+      "id": "pasos_7k",
+      "area": "cuerpo",
+      "name": "7.000 pasos",
+      "criterion": "Llegar a 7.000 pasos en el día (mirá el contador del teléfono). Cargá los pasos del día.",
+      "tier": 2,
+      "target": 7000,
+      "unit": "pasos",
+      "auto": false
+    },
+    {
       "id": "pasos_10k",
       "area": "cuerpo",
       "name": "10.000 pasos",

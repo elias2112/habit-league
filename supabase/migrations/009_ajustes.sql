@@ -1,5 +1,5 @@
 -- 009 — Ajustes del dueño (2026-11-16): elegir los ejercicios de la fuerza base, cambiar de grupo (crear uno nuevo
---        o unirse a otro saliendo del actual) y contenido nuevo (videojuegos: vicio, hábitos y pregunta del Juicio).
+--        o unirse a otro saliendo del actual), contenido nuevo (videojuegos, 7.000 pasos) y el momento de cada hábito.
 -- Ejecutar DESPUÉS de la 008. Se puede re-ejecutar. El bloque CONTENT9 lo genera `npm run catalog` desde content/:
 -- así, al editar hábitos, vicios o el Juicio alcanza con volver a correr esta migración.
 
@@ -30,6 +30,7 @@ insert into public.catalog_habits (id, area, name, criterion, tier, target, unit
   ('agradecer', 'social', 'Agradecer a alguien', 'Agradecerle a alguien por algo concreto.', 1, 1, null, false, null),
   ('llamada_10', 'social', 'Llamar a alguien 10 minutos', 'Una llamada o videollamada de al menos 10 minutos.', 2, 1, null, false, null),
   ('plan_persona', 'social', 'Pasar tiempo en persona con alguien', 'Compartir un rato en persona con alguien que te importa.', 3, 1, null, false, null),
+  ('pasos_7k', 'cuerpo', '7.000 pasos', 'Llegar a 7.000 pasos en el día (mirá el contador del teléfono). Cargá los pasos del día.', 2, 7000, 'pasos', false, 'cuerpo'),
   ('pasos_10k', 'cuerpo', '10.000 pasos', 'Llegar a 10.000 pasos en el día (podés mirar el contador del teléfono).', 2, 1, null, false, 'cuerpo'),
   ('correr_5k', 'cuerpo', 'Correr 5 km', 'Correr al menos 5 km, de una o en tramos.', 3, 1, null, false, 'cuerpo'),
   ('fumar_menos', 'cuerpo', 'Fumar menos que ayer', 'Fumar menos cigarrillos que el día anterior.', 2, 1, null, true, 'cuerpo'),
@@ -250,9 +251,70 @@ begin
   perform public.leave_group_of(auth.uid());
 end $$;
 
+-- ───────────── 4. ¿Cuándo lo hacés? (momento de cada hábito) ─────────────
+-- Atar cada hábito a un momento del día ("después del desayuno"). Es personal: se cambia directo, no cuenta para
+-- ningún cálculo y lo ve solo su dueño (habits solo la lee su dueño).
+alter table public.habits add column if not exists cue text;
+alter table public.habits drop constraint if exists habits_cue_check;
+alter table public.habits add constraint habits_cue_check check (cue is null or char_length(cue) between 1 and 60);
+
+create or replace function public.set_habit_cue(p_habit uuid, p_cue text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'No autenticado'; end if;
+  update habits set cue = nullif(trim(p_cue), '') where id = p_habit and user_id = auth.uid();
+  if not found then raise exception 'Hábito inexistente.'; end if;
+end $$;
+
+-- Mi día, con el momento de cada hábito.
+create or replace function public.my_day()
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare d date; pid uuid; st jsonb; grp text;
+begin
+  if auth.uid() is null then raise exception 'No autenticado'; end if;
+  d := public.user_today(auth.uid());
+  pid := public.plan_for(auth.uid(), d);
+  st := public.game_state(auth.uid());
+  select g.name into grp from groups g where g.id = public.my_group(auth.uid());
+  return jsonb_build_object(
+    'day', d,
+    'has_plan', pid is not null,
+    'group_name', grp,
+    'score', public.day_score(auth.uid(), d),
+    'wallet', st -> 'wallet',
+    'level', st -> 'level',
+    'rank', st -> 'rank',
+    'strength', st -> 'strength',
+    'strength_cap', public.strength_cap(auth.uid(), (st -> 'level' ->> 'level')::int, d),
+    'habits', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', h.id, 'name', h.name, 'criterion', h.criterion, 'pillar', h.pillar, 'catalog_id', h.catalog_id, 'unit', h.unit,
+        'private', h.private, 'weight', ph.weight, 'target', ph.target, 'scope', ph.scope, 'count', coalesce(l.count, 0),
+        'photo_path', l.photo_path, 'block', h.block, 'strength_id', h.strength_id, 'objective_id', h.objective_id, 'cue', h.cue)
+        order by h.created_at)
+      from plan_habits ph join habits h on h.id = ph.habit_id
+      left join habit_logs l on l.habit_id = h.id and l.log_date = d
+      where ph.plan_id = pid), '[]'),
+    'vices', coalesce((select jsonb_agg(jsonb_build_object(
+        'id', v.id, 'name', v.name, 'weight', pv.weight, 'severity', pv.severity, 'scope', pv.scope,
+        'state', coalesce(vd.state, 'none'), 'covered', public.slip_covered(v.id, d),
+        'clean_days', public.clean_streak(v.id, case when vd.state = 'clean' then d else d - 1 end))
+        order by v.created_at)
+      from plan_vices pv join vices v on v.id = pv.vice_id
+      left join vice_days vd on vd.vice_id = v.id and vd.day = d
+      where pv.plan_id = pid), '[]'),
+    'objectives', coalesce((select jsonb_agg(jsonb_build_object('id', o.id, 'title', o.title, 'tag', o.tag, 'goal_id', o.goal_id,
+        'pillar', o.pillar, 'unit', o.unit, 'target_value', o.target_value, 'start_value', o.start_value, 'deadline', o.deadline))
+      from plan_objectives po join objectives o on o.id = po.objective_id where po.plan_id = pid), '[]'),
+    'tomorrow_changes', exists (select 1 from plans where user_id = auth.uid() and effective_from > d),
+    'notices', coalesce((select jsonb_agg(jsonb_build_object('id', n.id, 'text', n.text)) from user_notices n
+                         where n.user_id = auth.uid() and n.read_at is null), '[]')
+  );
+end $$;
+
+
 -- ───────────── 90. Permisos ─────────────
 revoke execute on function public.leave_group_of(uuid) from public, anon, authenticated;
 revoke execute on function public.create_initial_plan(jsonb, jsonb, jsonb, jsonb), public.create_group(text, int, boolean),
-  public.join_group(text, boolean), public.leave_group() from public, anon;
+  public.join_group(text, boolean), public.leave_group(), public.set_habit_cue(uuid, text), public.my_day() from public, anon;
 grant execute on function public.create_initial_plan(jsonb, jsonb, jsonb, jsonb), public.create_group(text, int, boolean),
-  public.join_group(text, boolean), public.leave_group() to authenticated;
+  public.join_group(text, boolean), public.leave_group(), public.set_habit_cue(uuid, text), public.my_day() to authenticated;

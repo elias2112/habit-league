@@ -11,6 +11,8 @@ export interface DayHabit {
   id: string; name: string; criterion: string | null; pillar: string | null; catalog_id: string | null; unit: string | null
   private: boolean; weight: number; target: number | null; count: number; photo_path: string | null; scope: Scope
   block: 'general' | 'objetivo' | 'deporte' | 'fuerza'; strength_id: string | null; objective_id: string | null
+  /** Momento del día al que la persona ata el hábito («después del desayuno»). */
+  cue?: string | null
 }
 export interface Level { xp: number; level: number; xpIntoLevel: number; xpForNext: number; progress: number }
 export interface Rank { points: number; name: string; minPoints: number; reward: number; next: { name: string; minPoints: number; reward: number } | null; missing: number; held: number }

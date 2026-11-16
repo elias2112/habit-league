@@ -189,8 +189,33 @@ function Plan() {
 const BLOCK_LABEL: Record<string, string> = { fuerza: '💪 Fuerza base', deporte: '🏃 Deporte o gimnasio', objetivo: '🎯 De un objetivo', general: '✨ General' }
 
 function HabitChange({ h, cap, canRemove, onSend }: { h: DayHabit; cap: number; canRemove: boolean; onSend: Send }) {
-  if (h.block === 'fuerza') return <StrengthTarget h={h} cap={cap} onSend={onSend} />
-  return <HabitChangeForm h={h} canRemove={canRemove} onSend={onSend} />
+  return (
+    <>
+      <CueForm h={h} />
+      {h.block === 'fuerza' ? <StrengthTarget h={h} cap={cap} onSend={onSend} /> : <HabitChangeForm h={h} canRemove={canRemove} onSend={onSend} />}
+    </>
+  )
+}
+
+/** ¿Cuándo lo hacés? Atar el hábito a un momento del día. Es personal: se guarda directo y no cuenta para el puntaje. */
+function CueForm({ h }: { h: DayHabit }) {
+  const [cue, setCue] = useState(h.cue ?? '')
+  const [msg, setMsg] = useState<string | null>(null)
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.rpc('set_habit_cue', { p_habit: h.id, p_cue: cue })
+    setMsg(error ? errorMessage(error) : 'Guardado.')
+  }
+  return (
+    <form onSubmit={save} className="mt-3 border-t border-line pt-3">
+      <label className="label" htmlFor={`cue-${h.id}`}>¿Cuándo lo hacés? (opcional)</label>
+      <div className="flex gap-2">
+        <input id={`cue-${h.id}`} className="input" maxLength={60} placeholder="Ej.: después del desayuno" value={cue} onChange={(e) => { setCue(e.target.value); setMsg(null) }} />
+        <button className="btn btn-ghost min-h-9 px-3 py-1 text-sm" disabled={cue === (h.cue ?? '')}>Guardar</button>
+      </div>
+      <p className="mt-1 text-xs text-muted">{msg ?? 'Atarlo a algo que ya hacés todos los días ayuda a que salga solo. Solo lo ves vos.'}</p>
+    </form>
+  )
 }
 
 /** Meta de un ejercicio de fuerza base: botones de a 10 hasta el tope del nivel; se vota porque cuenta para el ranking. */

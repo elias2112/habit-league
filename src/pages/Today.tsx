@@ -268,6 +268,7 @@ function HabitRow({ h, busy, onToggle, onAdd, onPhoto }: {
         <PillarIcon pillar={h.pillar} />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{h.name} {h.private && <span className="text-xs text-muted" title="Privado: el grupo no ve el nombre ni la foto">🔒</span>}</p>
+          {h.cue && <p className="text-xs font-semibold text-primary">🕒 {h.cue}</p>}
           {criterion && <p className="text-xs text-muted">{criterion}</p>}
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <Weight w={h.weight} />
